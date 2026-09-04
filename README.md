@@ -88,6 +88,29 @@ They need real ABIs and a settled approval sequence first:
 - Reads poll on an interval rather than on every block. Fine for a prototype;
   block-driven invalidation is a small change in the hooks.
 
+## Demo mode (design work before deploy)
+
+With no contract addresses every figure renders as `—`, which makes the
+populated states impossible to review. Set:
+
+```
+VITE_DEMO_MODE=true
+```
+
+and every screen fills with invented data: a ticking balance, one empty lock,
+one mid-countdown, one expired, agents of each rank including a dead one and
+one still revealing, live tax percentages, dashboard stats.
+
+The numbers are fake; the behaviour is not. The balance decays through the same
+`projectBalance` the live app uses, countdowns run against the same clock, and
+states are derived rather than hardcoded — so what you're looking at is the
+real UI with fake inputs. A banner says so at the top of every screen.
+
+Fixtures live in `src/config/demo.ts`. To remove demo mode entirely, delete
+that file and the `if (DEMO)` branches in `src/hooks`.
+
+Never set this true on a build pointing at real contracts.
+
 ## The honesty invariants
 
 These aren't styling choices — breaking one is a §7 regression:

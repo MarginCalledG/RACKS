@@ -5,11 +5,12 @@ import { racksAbi } from '../abi'
 import { addresses, configured } from '../config/addresses'
 import { projectBalance, rayToPct } from '../lib/melt'
 import { useChainClock } from './useChainClock'
+import { DEMO, DEMO_DECIMALS, demo } from '../config/demo'
 
 const REFETCH_MS = 6_000
 
 export function useRacksStats() {
-  const enabled = configured('racks')
+  const enabled = configured('racks') && !DEMO
   const base = { address: addresses.racks as Address, abi: racksAbi } as const
 
   const { data, isLoading } = useReadContracts({
@@ -26,6 +27,17 @@ export function useRacksStats() {
   const freeFloatRay = data?.[1].status === 'success' ? data[1].result : undefined
   const totalSupply = data?.[2].status === 'success' ? data[2].result : undefined
   const decimals = data?.[3].status === 'success' ? Number(data[3].result) : 18
+
+  if (DEMO) {
+    return {
+      configured: true,
+      isLoading: false,
+      rateBps: demo.rateBps,
+      freeFloatPct: rayToPct(demo.freeFloatRay),
+      totalSupply: demo.totalSupply,
+      decimals: DEMO_DECIMALS,
+    }
+  }
 
   return {
     configured: enabled,
@@ -47,7 +59,7 @@ export function useRacksStats() {
 export function useMeltingBalance(account?: Address) {
   const { address: connected } = useAccount()
   const owner = account ?? connected
-  const enabled = configured('racks') && !!owner
+  const enabled = configured('racks') && !!owner && !DEMO
   const { rateBps, decimals } = useRacksStats()
   const { nowSec } = useChainClock()
 
@@ -72,6 +84,22 @@ export function useMeltingBalance(account?: Address) {
     // display at the last read instead of decaying from it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onChain])
+
+  if (DEMO) {
+    return {
+      onChain: demo.balance,
+      live: projectBalance(
+        demo.balance,
+        DEMO_DECIMALS,
+        nowSec - demo.balanceAnchorSec,
+        demo.rateBps,
+      ),
+      decimals: DEMO_DECIMALS,
+      rateBps: demo.rateBps,
+      refetch,
+      configured: true,
+    }
+  }
 
   const live =
     anchor.current && rateBps !== undefined

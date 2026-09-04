@@ -9,6 +9,7 @@ import { useEpoch } from '../hooks/useEpoch'
 import { bpsToPct, halfLifeDays } from '../lib/melt'
 import { duration, pct, token } from '../lib/format'
 import { MELT } from '../config/protocol'
+import { DEMO, demo } from '../config/demo'
 
 export function Dashboard() {
   const { rateBps, freeFloatPct, totalSupply, decimals } = useRacksStats()
@@ -19,8 +20,10 @@ export function Dashboard() {
     address: addresses.taxSwapper as Address,
     abi: taxSwapperAbi,
     functionName: 'pending',
-    query: { enabled: isConfigured('taxSwapper'), refetchInterval: 15_000 },
+    query: { enabled: isConfigured('taxSwapper') && !DEMO, refetchInterval: 15_000 },
   })
+
+  const treasury = DEMO ? demo.treasuryPending : treasuryPending
 
   const lockedPct = freeFloatPct === undefined ? undefined : 100 - freeFloatPct
   const clock = secondsRemaining === undefined ? null : duration(secondsRemaining)
@@ -92,7 +95,7 @@ export function Dashboard() {
           <dl>
             <Pair
               label="Tax awaiting conversion"
-              value={token(treasuryPending, decimals, 2)}
+              value={token(treasury, decimals, 2)}
             />
           </dl>
           <p className="muted" style={{ marginTop: '0.75rem' }}>

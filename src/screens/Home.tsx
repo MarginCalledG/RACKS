@@ -6,6 +6,7 @@ import { useLockPositions } from '../hooks/useCayman'
 import { halfLifeDays, meltOver } from '../lib/melt'
 import { num, short, token } from '../lib/format'
 import { activeChain, explorerAddress, FAUCET_URL, isTestnet } from '../config/chains'
+import { DEMO, demo } from '../config/demo'
 
 export function Home({ go }: { go: (screen: string) => void }) {
   const { address, isConnected, chainId } = useAccount()
@@ -14,10 +15,12 @@ export function Home({ go }: { go: (screen: string) => void }) {
   const { live, decimals, rateBps } = useMeltingBalance()
   const { positions } = useLockPositions()
 
+  const shown = isConnected || DEMO
+  const shownAddress = address ?? (DEMO ? demo.account : undefined)
   const wrongChain = isConnected && chainId !== activeChain.id
   const protectedTotal = positions.reduce((sum, p) => sum + p.amount, 0n)
 
-  if (!isConnected) {
+  if (!shown) {
     return (
       <div className="stack">
         <Field title="Connect a wallet">
@@ -80,11 +83,11 @@ export function Home({ go }: { go: (screen: string) => void }) {
           title="Wallet"
           note={
             <a
-              href={explorerAddress(address!)}
+              href={explorerAddress(shownAddress!)}
               target="_blank"
               rel="noreferrer"
             >
-              {short(address)}
+              {short(shownAddress)}
             </a>
           }
         >

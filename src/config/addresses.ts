@@ -1,6 +1,7 @@
 import type { Address } from 'viem'
 import { isAddress } from 'viem'
 import { isTestnet } from './chains'
+import { DEMO } from './demo'
 
 /**
  * Nothing is deployed yet. Every address here is read from env and may be
@@ -50,10 +51,12 @@ export const tradesThroughWrapper =
 export type ContractKey = keyof typeof addresses
 
 export function configured(...keys: ContractKey[]): boolean {
+  if (DEMO) return true
   return keys.every((k) => addresses[k] !== null)
 }
 
 /** Which required addresses are still missing — used by the setup banner. */
 export function missing(...keys: ContractKey[]): ContractKey[] {
+  if (DEMO) return []
   return keys.filter((k) => addresses[k] === null)
 }

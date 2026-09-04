@@ -9,6 +9,7 @@ import { HowItWorks } from './screens/HowItWorks'
 import { activeChain, isTestnet } from './config/chains'
 import { missing } from './config/addresses'
 import { Notice } from './components/ui'
+import { DEMO } from './config/demo'
 
 const SCREENS = [
   { id: 'home', label: 'Wallet' },
@@ -32,7 +33,19 @@ export default function App() {
         </span>
       </header>
 
-      {unset.length > 0 ? (
+      {DEMO ? (
+        <Notice kind="warn">
+          <p>
+            Design preview. Every figure on this site is invented — balances,
+            rates, pool sizes, agent ranks, tax percentages. No contracts are
+            deployed and nothing here is connected to a chain. The balance
+            ticks because the decay maths is real; the number it decays from is
+            not.
+          </p>
+        </Notice>
+      ) : null}
+
+      {!DEMO && unset.length > 0 ? (
         <Notice kind="setup">
           <p>
             Pre-deployment build. {unset.length} contract

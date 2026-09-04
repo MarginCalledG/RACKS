@@ -4,6 +4,7 @@ import { irsAgentAbi } from '../abi'
 import { addresses, configured } from '../config/addresses'
 import { EPOCH_SEC } from '../config/protocol'
 import { useChainClock } from './useChainClock'
+import { DEMO, demo } from '../config/demo'
 
 /**
  * Epoch numbering assumption: epoch N spans
@@ -14,7 +15,7 @@ import { useChainClock } from './useChainClock'
  * the value shown here should match the contract exactly, not approximately.
  */
 export function useEpoch() {
-  const enabled = configured('irsAgent')
+  const enabled = configured('irsAgent') && !DEMO
   const base = { address: addresses.irsAgent as Address, abi: irsAgentAbi } as const
   const { nowSec } = useChainClock(1000)
 
@@ -35,6 +36,18 @@ export function useEpoch() {
     epoch !== undefined && startTime !== undefined
       ? startTime + (epoch + 1) * epochSec
       : undefined
+
+  if (DEMO) {
+    const end = demo.epochStart + (demo.epoch + 1) * demo.epochSec
+    return {
+      epoch: demo.epoch,
+      epochSec: demo.epochSec,
+      startTime: demo.epochStart,
+      endsAt: end,
+      secondsRemaining: end - nowSec,
+      configured: true,
+    }
+  }
 
   return {
     epoch,

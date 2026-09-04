@@ -4,6 +4,7 @@ import { caymanAbi } from '../abi'
 import { addresses, configured } from '../config/addresses'
 import { LOCK_TIERS, type TierId } from '../config/protocol'
 import { useChainClock } from './useChainClock'
+import { DEMO, demo } from '../config/demo'
 
 export type LockPosition = {
   tier: TierId
@@ -22,7 +23,7 @@ export type LockPosition = {
 export function useLockPositions(account?: Address) {
   const { address: connected } = useAccount()
   const owner = account ?? connected
-  const enabled = configured('cayman') && !!owner
+  const enabled = configured('cayman') && !!owner && !DEMO
   const { nowSec } = useChainClock(1000)
   const base = { address: addresses.cayman as Address, abi: caymanAbi } as const
 
@@ -38,6 +39,31 @@ export function useLockPositions(account?: Address) {
     ],
     query: { enabled, refetchInterval: 10_000 },
   })
+
+  if (DEMO) {
+    const demoPositions: LockPosition[] = LOCK_TIERS.map((t, i) => {
+      const d = demo.locks[i]
+      const hasPosition = d.amount > 0n
+      const secondsRemaining = d.unlockAt - nowSec
+      return {
+        tier: t.id as TierId,
+        amount: d.amount,
+        unlockAt: d.unlockAt,
+        fee: demo.fees[i],
+        durationSec: demo.durations[i],
+        hasPosition,
+        isExpired: hasPosition && secondsRemaining <= 0,
+        secondsRemaining,
+      }
+    })
+    return {
+      positions: demoPositions,
+      potBalance: demo.potBalance,
+      isLoading: false,
+      refetch,
+      configured: true,
+    }
+  }
 
   const positions: LockPosition[] = LOCK_TIERS.map((t, i) => {
     const at = (n: number) => data?.[i * 4 + n]

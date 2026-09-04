@@ -6,6 +6,7 @@ import { addresses, configured } from '../config/addresses'
 import { FEED_INTERVAL_SEC, type RankId } from '../config/protocol'
 import { useChainClock } from './useChainClock'
 import { useEpoch } from './useEpoch'
+import { DEMO, demo } from '../config/demo'
 
 export type Agent = {
   id: bigint
@@ -29,7 +30,7 @@ export type Agent = {
 export function useAgentRoster(account?: Address) {
   const { address: connected } = useAccount()
   const owner = account ?? connected
-  const enabled = configured('irsAgent') && !!owner
+  const enabled = configured('irsAgent') && !!owner && !DEMO
   const { nowSec } = useChainClock(1000)
   const { epoch } = useEpoch()
   const base = { address: addresses.irsAgent as Address, abi: irsAgentAbi } as const
@@ -98,6 +99,32 @@ export function useAgentRoster(account?: Address) {
     void refetchDetails()
   }, [refetchIds, refetchDetails])
 
+  if (DEMO) {
+    const demoAgents: Agent[] = demo.agents.map((d) => {
+      const starvesAt = nowSec - d.fedAgo + FEED_INTERVAL_SEC
+      return {
+        id: d.id,
+        rank: d.revealed ? (d.tier as RankId) : null,
+        revealed: d.revealed,
+        dead: d.dead,
+        alive: !d.dead,
+        lastFed: nowSec - d.fedAgo,
+        starvesAt,
+        secondsUntilStarving: starvesAt - nowSec,
+        lastAttackEpoch: d.atkOffset ? demo.epoch + 1 : null,
+        canAttackThisEpoch: d.atkOffset === 0 && d.revealed && !d.dead,
+        pendingLastEpoch: d.pending,
+      }
+    })
+    return {
+      agents: demoAgents,
+      living: demoAgents.filter((a) => a.alive),
+      dead: demoAgents.filter((a) => !a.alive),
+      refetch,
+      configured: true,
+    }
+  }
+
   return {
     agents,
     living: agents.filter((a) => a.alive),
@@ -120,7 +147,7 @@ export type PendingAudit = { id: bigint; epoch: bigint; hit: boolean }
 export function useAsyncResults(onChange?: () => void) {
   const [reveals, setReveals] = useState<PendingReveal[]>([])
   const [audits, setAudits] = useState<PendingAudit[]>([])
-  const enabled = configured('irsAgent')
+  const enabled = configured('irsAgent') && !DEMO
 
   useWatchContractEvent({
     address: addresses.irsAgent as Address,

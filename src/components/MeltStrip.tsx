@@ -3,6 +3,7 @@ import { bpsToPct, halfLifeDays, meltOver } from '../lib/melt'
 import { num, pct } from '../lib/format'
 import { useMeltingBalance, useRacksStats } from '../hooks/useRacks'
 import { useAccount } from 'wagmi'
+import { DEMO } from '../config/demo'
 
 /**
  * §7: "Always show that RACKS shrinks." This strip sits above every screen and
@@ -14,7 +15,8 @@ import { useAccount } from 'wagmi'
  * number genuinely is falling, and a static figure would misrepresent it.
  */
 export function MeltStrip() {
-  const { isConnected } = useAccount()
+  const { isConnected: walletConnected } = useAccount()
+  const isConnected = walletConnected || DEMO
   const { live, rateBps } = useMeltingBalance()
   const { freeFloatPct } = useRacksStats()
 

@@ -3,6 +3,7 @@ import { useReadContracts } from 'wagmi'
 import { twapOracleAbi } from '../abi'
 import { addresses, configured } from '../config/addresses'
 import { bpsToPct } from '../lib/melt'
+import { DEMO, demo } from '../config/demo'
 
 /**
  * The exact tax for THIS trade size, both directions, so the panel can show
@@ -13,7 +14,7 @@ import { bpsToPct } from '../lib/melt'
  * Refetched aggressively — a stale tax number is a wrong tax number.
  */
 export function useTradeTax(amount: bigint | undefined) {
-  const enabled = configured('twapOracle') && amount !== undefined && amount > 0n
+  const enabled = configured('twapOracle') && amount !== undefined && amount > 0n && !DEMO
   const base = { address: addresses.twapOracle as Address, abi: twapOracleAbi } as const
 
   const { data, isFetching } = useReadContracts({
@@ -26,6 +27,17 @@ export function useTradeTax(amount: bigint | undefined) {
 
   const buyBps = data?.[0].status === 'success' ? Number(data[0].result) : undefined
   const sellBps = data?.[1].status === 'success' ? Number(data[1].result) : undefined
+
+  if (DEMO) {
+    return {
+      buyBps: demo.buyTaxBps,
+      sellBps: demo.sellTaxBps,
+      buyPct: bpsToPct(demo.buyTaxBps),
+      sellPct: bpsToPct(demo.sellTaxBps),
+      isFetching: false,
+      configured: true,
+    }
+  }
 
   return {
     buyBps,

@@ -133,17 +133,27 @@ These aren't styling choices — breaking one is a §7 regression:
 
 ## Design
 
-Cartoon heist book. Newsprint-yellow page with a halftone dot screen, white
-panels with 3px ink outlines and hard offset shadows, flat saturated fills,
-no gradients. Display type is Luckiest Guy; everything else is Baloo 2.
+The app is a 1990s desktop. Screens are windows with title bars, navigation is
+a desktop of icons plus a taskbar, and windows are draggable, stackable,
+minimisable and closable. Below 760px the geometry is ignored and one window
+fills the screen, switched from the taskbar — dragging overlapping windows on
+a phone is unusable and the taskbar already does the job.
 
-The three agent ranks are drawn characters (`src/components/Mascots.tsx`),
-sized to read both at 30px in a table row and at 84px on the mint card. Their
-silhouettes escalate with rarity, so the shape tells you the rank before the
-label does.
+No Microsoft assets are used or reproduced. The bevels are plain CSS borders,
+every icon is drawn on a 16px grid in `src/components/win/Icons.tsx`, and the
+type is Tahoma/Verdana with fallbacks — fonts that ship with the OS, so no
+webfont is loaded at all.
 
-One constraint the comic look does not get to break: **all figures use Baloo 2
-with `tabular-nums`.** The balance re-renders four times a second, and the
-usual comic display faces (Bangers, Titan One, Luckiest Guy, Bungee) have
-proportional digits — checked with fontTools — which makes a ticking number
-visibly jitter. Loud shell, steady numbers.
+The bevel is the whole visual language, and getting it backwards is what makes
+a fake 95 UI feel off: `.raised` for anything clickable or sitting on top,
+`.sunken` for anything you read out of or type into.
+
+**Why the taskbar tray matters.** The brief requires the melt to be visible at
+all times, and a windowed UI breaks that the moment someone closes a window.
+The tray solves it the way a real OS solves it for the clock: it's chrome, not
+content, and there is no control anywhere that hides it. The full readout also
+appears inside the Wallet window.
+
+The risk page ("Read me first") opens on load. It's the one screen the brief
+wants one click away, and on an empty desktop nothing competes with it.
+

@@ -10,7 +10,7 @@ import { useEpoch } from '../hooks/useEpoch'
 import { useLockPositions } from '../hooks/useCayman'
 import { useMeltingBalance } from '../hooks/useRacks'
 import { duration, num, token, usdg } from '../lib/format'
-import { RankMascot, UnknownAgent } from '../components/Mascots'
+import { AgentIcon } from '../components/win/Icons'
 
 export function Agents() {
   const { agents, living, dead, refetch, configured } = useAgentRoster()
@@ -48,19 +48,6 @@ export function Agents() {
           title="Mint an agent"
           note={`${usdg(MINT_PRICE_USDG)} in USDG`}
         >
-          <div className="mascot-row" style={{ marginBottom: '0.875rem' }}>
-            {AGENT_RANKS.map((r) => (
-              <div key={r.id} style={{ textAlign: 'center', flex: '1 1 0' }}>
-                <RankMascot rank={r.id} size={84} />
-                <div className="figure-sm" style={{ fontSize: '0.875rem' }}>
-                  {r.name}
-                </div>
-                <div className="muted" style={{ fontSize: '0.8125rem' }}>
-                  {r.mintChancePct}% chance
-                </div>
-              </div>
-            ))}
-          </div>
           <table className="rows">
             <thead>
               <tr>
@@ -191,19 +178,14 @@ export function Agents() {
                           style={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '0.4375rem',
+                            gap: '5px',
                           }}
                         >
+                          <AgentIcon size={16} />
                           {!a.revealed || a.rank === null ? (
-                            <>
-                              <UnknownAgent size={30} />
-                              <span className="tag">revealing rank…</span>
-                            </>
+                            <span className="tag">revealing rank…</span>
                           ) : (
-                            <>
-                              <RankMascot rank={a.rank} size={30} />
-                              {rank?.name ?? '—'}
-                            </>
+                            rank?.name ?? '—'
                           )}
                         </span>
                       </td>

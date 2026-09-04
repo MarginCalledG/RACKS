@@ -1,5 +1,14 @@
-import { useState } from 'react'
-import { MeltStrip } from './components/MeltStrip'
+import { useCallback, useEffect, useState } from 'react'
+import { Win, type WindowChrome } from './components/win/Win'
+import { Taskbar } from './components/win/Taskbar'
+import {
+  AgentIcon,
+  HelpIcon,
+  IslandIcon,
+  MonitorIcon,
+  TradeIcon,
+  WalletIcon,
+} from './components/win/Icons'
 import { Home } from './screens/Home'
 import { Trade } from './screens/Trade'
 import { Cayman } from './screens/Cayman'
@@ -8,95 +17,191 @@ import { Dashboard } from './screens/Dashboard'
 import { HowItWorks } from './screens/HowItWorks'
 import { activeChain, isTestnet } from './config/chains'
 import { missing } from './config/addresses'
-import { Notice } from './components/ui'
 import { DEMO } from './config/demo'
 
-const SCREENS = [
-  { id: 'home', label: 'Wallet' },
-  { id: 'trade', label: 'Trade' },
-  { id: 'cayman', label: 'Cayman Islands' },
-  { id: 'agents', label: 'IRS Agents' },
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'how', label: 'How this works' },
-] as const
+type AppDef = {
+  id: string
+  title: string
+  label: string
+  icon: (p: { size?: number }) => JSX.Element
+  w: number
+  h: number
+}
+
+/** Window titles read like 90s software, deliberately. */
+const APPS: AppDef[] = [
+  { id: 'home', title: 'My Wallet', label: 'My Wallet', icon: WalletIcon, w: 620, h: 470 },
+  { id: 'cayman', title: 'Cayman Islands', label: 'Cayman Islands', icon: IslandIcon, w: 760, h: 520 },
+  { id: 'agents', title: 'IRS Agents', label: 'IRS Agents', icon: AgentIcon, w: 820, h: 560 },
+  { id: 'trade', title: 'Trade', label: 'Trade', icon: TradeIcon, w: 660, h: 460 },
+  { id: 'dashboard', title: 'Dashboard', label: 'Dashboard', icon: MonitorIcon, w: 700, h: 440 },
+  { id: 'how', title: 'Read me first', label: 'Read me first', icon: HelpIcon, w: 640, h: 520 },
+]
+
+function useNarrow() {
+  const [narrow, setNarrow] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 760,
+  )
+  useEffect(() => {
+    const on = () => setNarrow(window.innerWidth < 760)
+    window.addEventListener('resize', on)
+    return () => window.removeEventListener('resize', on)
+  }, [])
+  return narrow
+}
 
 export default function App() {
-  const [screen, setScreen] = useState<string>('home')
+  const narrow = useNarrow()
+  const [windows, setWindows] = useState<WindowChrome[]>([])
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [topZ, setTopZ] = useState(10)
+  const [selected, setSelected] = useState<string | null>(null)
   const unset = missing('racks', 'cayman', 'irsAgent', 'twapOracle')
 
+  const open = useCallback(
+    (id: string) => {
+      const def = APPS.find((a) => a.id === id)
+      if (!def) return
+      setTopZ((z) => z + 1)
+      setActiveId(id)
+      setWindows((ws) => {
+        const existing = ws.find((w) => w.id === id)
+        if (existing) {
+          return ws.map((w) =>
+            w.id === id ? { ...w, minimised: false, z: topZ + 1 } : w,
+          )
+        }
+        // Cascade so a second window doesn't land exactly on the first.
+        const n = ws.length
+        return [
+          ...ws,
+          {
+            id,
+            title: def.title,
+            icon: <def.icon size={16} />,
+            x: 40 + n * 28,
+            y: 30 + n * 26,
+            w: def.w,
+            h: def.h,
+            z: topZ + 1,
+            minimised: false,
+            maximised: false,
+          },
+        ]
+      })
+    },
+    [topZ],
+  )
+
+  // The risk page opens on first load. It is the one screen the brief wants a
+  // click away, and on an empty desktop nothing else competes with it.
+  useEffect(() => {
+    open('how')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const focus = useCallback(
+    (id: string) => {
+      setTopZ((z) => z + 1)
+      setActiveId(id)
+      setWindows((ws) => ws.map((w) => (w.id === id ? { ...w, z: topZ + 1 } : w)))
+    },
+    [topZ],
+  )
+
+  const close = (id: string) =>
+    setWindows((ws) => ws.filter((w) => w.id !== id))
+
+  const patch = (id: string, p: Partial<WindowChrome>) =>
+    setWindows((ws) => ws.map((w) => (w.id === id ? { ...w, ...p } : w)))
+
+  const onTask = (id: string) => {
+    const w = windows.find((x) => x.id === id)
+    if (!w) return
+    if (w.minimised) return open(id)
+    if (activeId === id) return patch(id, { minimised: true })
+    focus(id)
+  }
+
+  const body = (id: string) => {
+    switch (id) {
+      case 'home':
+        return <Home go={open} />
+      case 'trade':
+        return <Trade />
+      case 'cayman':
+        return <Cayman />
+      case 'agents':
+        return <Agents />
+      case 'dashboard':
+        return <Dashboard />
+      case 'how':
+        return <HowItWorks />
+      default:
+        return null
+    }
+  }
+
   return (
-    <div className="shell">
-      <header className="masthead">
-        <span className="wordmark">RACKS</span>
-        <span className="tagline">
-          Your money melts. The Caymans are open. The agents are hiring.
-        </span>
-      </header>
+    <>
+      <div className="desktop" onPointerDown={() => setSelected(null)}>
+        <div className="icons">
+          {APPS.map((a) => (
+            <button
+              key={a.id}
+              className="icon"
+              aria-pressed={selected === a.id}
+              onPointerDown={(e) => {
+                e.stopPropagation()
+                setSelected(a.id)
+              }}
+              onDoubleClick={() => open(a.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') open(a.id)
+              }}
+            >
+              <a.icon size={32} />
+              <span>{a.label}</span>
+            </button>
+          ))}
+        </div>
 
-      {DEMO ? (
-        <Notice kind="warn">
-          <p>
-            Design preview. Every figure on this site is invented — balances,
-            rates, pool sizes, agent ranks, tax percentages. No contracts are
-            deployed and nothing here is connected to a chain. The balance
-            ticks because the decay maths is real; the number it decays from is
-            not.
-          </p>
-        </Notice>
-      ) : null}
-
-      {!DEMO && unset.length > 0 ? (
-        <Notice kind="setup">
-          <p>
-            Pre-deployment build. {unset.length} contract
-            {unset.length === 1 ? '' : 's'} have no address yet, so the figures
-            below are blank rather than zero. Fill in <span className="figure-sm">.env</span>{' '}
-            after the {isTestnet ? 'testnet' : 'mainnet'} deploy.
-          </p>
-        </Notice>
-      ) : null}
-
-      {/* Never conditional. §7. */}
-      <MeltStrip />
-
-      <nav className="nav">
-        {SCREENS.map((s) => (
-          <button
-            key={s.id}
-            onClick={() => setScreen(s.id)}
-            aria-current={screen === s.id ? 'page' : undefined}
+        {windows.map((w) => (
+          <Win
+            key={w.id}
+            chrome={w}
+            active={activeId === w.id}
+            narrow={narrow}
+            onFocus={() => focus(w.id)}
+            onClose={() => close(w.id)}
+            onMinimise={() => patch(w.id, { minimised: true })}
+            onToggleMax={() => patch(w.id, { maximised: !w.maximised })}
+            onMove={(x, y) => patch(w.id, { x, y })}
+            status={
+              <>
+                <span>
+                  {DEMO
+                    ? 'Demo data — every figure on screen is invented'
+                    : unset.length > 0
+                      ? `${unset.length} contract(s) not deployed yet`
+                      : 'Connected'}
+                </span>
+                <span>{activeChain.name}</span>
+                {isTestnet ? <span>Testnet</span> : null}
+              </>
+            }
           >
-            {s.label}
-          </button>
+            {body(w.id)}
+          </Win>
         ))}
-      </nav>
+      </div>
 
-      <main>
-        {screen === 'home' && <Home go={setScreen} />}
-        {screen === 'trade' && <Trade />}
-        {screen === 'cayman' && <Cayman />}
-        {screen === 'agents' && <Agents />}
-        {screen === 'dashboard' && <Dashboard />}
-        {screen === 'how' && <HowItWorks />}
-      </main>
-
-      <footer className="footer">
-        <p>
-          {activeChain.name} · chain {activeChain.id}
-          {isTestnet ? ' · testnet, tokens are worthless' : ''}
-        </p>
-        <p>
-          RACKS loses 4.2–6.9% of its value per day by design. The agent game is
-          gambling and most players lose.{' '}
-          <button
-            className="btn secondary"
-            style={{ fontSize: '0.75rem', padding: '0.125rem 0.5rem' }}
-            onClick={() => setScreen('how')}
-          >
-            Read the risks
-          </button>
-        </p>
-      </footer>
-    </div>
+      <Taskbar
+        windows={windows}
+        activeId={activeId}
+        onTaskClick={onTask}
+        onStart={() => open('how')}
+      />
+    </>
   )
 }

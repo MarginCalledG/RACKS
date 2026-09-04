@@ -7,6 +7,7 @@ import { halfLifeDays, meltOver } from '../lib/melt'
 import { num, short, token } from '../lib/format'
 import { activeChain, explorerAddress, FAUCET_URL, isTestnet } from '../config/chains'
 import { DEMO, demo } from '../config/demo'
+import { MeltStrip } from '../components/MeltStrip'
 
 export function Home({ go }: { go: (screen: string) => void }) {
   const { address, isConnected, chainId } = useAccount()
@@ -68,6 +69,7 @@ export function Home({ go }: { go: (screen: string) => void }) {
 
   return (
     <div className="stack">
+      <MeltStrip />
       {wrongChain ? (
         <Notice kind="warn">
           <p>

@@ -160,7 +160,7 @@ export default function App() {
                 if (e.key === 'Enter' || e.key === ' ') open(a.id)
               }}
             >
-              <a.icon size={32} />
+              <a.icon size={48} />
               <span>{a.label}</span>
             </button>
           ))}

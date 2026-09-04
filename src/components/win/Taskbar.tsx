@@ -35,7 +35,7 @@ export function Taskbar({
   return (
     <div className="taskbar raised">
       <button className="start" onClick={onStart}>
-        <StartIcon size={16} />
+        <StartIcon size={20} />
         Start
       </button>
 
@@ -54,7 +54,7 @@ export function Taskbar({
       </div>
 
       <div className="tray" title="Your RACKS balance and today's melt rate">
-        <MeltIcon size={16} />
+        <MeltIcon size={20} />
         <span className="tray-melt">
           {live === undefined ? '—' : num(live, 2)}
           {rateBps !== undefined ? ` ▼${pct(bpsToPct(rateBps), 1)}` : ''}

@@ -94,7 +94,7 @@ body {
   inset: 0 0 40px 0;
   overflow: hidden;
   background-color: var(--desktop);
-  background-image: url('/desktop-wallpaper.webp');
+  background-image: url('./assets/desktop-wallpaper.webp');
   background-size: cover;
   background-position: center bottom;
   /* Pixel art must not be smoothed when the browser scales it up. */

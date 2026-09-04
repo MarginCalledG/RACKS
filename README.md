@@ -154,10 +154,15 @@ The tray solves it the way a real OS solves it for the clock: it's chrome, not
 content, and there is no control anywhere that hides it. The full readout also
 appears inside the Wallet window.
 
-The wallpaper is `public/desktop-wallpaper.webp` — Miami-at-dusk pixel art,
+The wallpaper is `src/assets/desktop-wallpaper.webp` — Miami-at-dusk pixel art,
 `background-size: cover` with `image-rendering: pixelated` so the browser
 doesn't smooth it when scaling. Teal remains the fallback colour: it paints
 instantly and is what shows if the image fails.
+
+It lives under `src/` rather than `public/` on purpose: Vite fingerprints
+assets it bundles, so swapping the image changes its filename and browsers
+fetch it immediately. A file in `public/` keeps its name and stays cached,
+which is exactly the trap this hit once already.
 
 Two constraints if it's ever swapped. The upper-left area must stay dark,
 because the desktop icon labels are white and sit there (this one averages

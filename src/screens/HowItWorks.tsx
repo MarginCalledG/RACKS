@@ -8,6 +8,7 @@ import {
 } from '../config/protocol'
 import { bpsToPct } from '../lib/melt'
 import { usdg } from '../lib/format'
+import { RankMascot } from '../components/Mascots'
 
 /**
  * §7's "plain-language what you're risking page". Written flat, without the
@@ -63,12 +64,18 @@ export function HowItWorks() {
           This is a casino. Minting an agent costs {usdg(MINT_PRICE_USDG)} and
           the rank you get is random:
         </p>
-        <ul>
+        <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
           {AGENT_RANKS.map((r) => (
-            <li key={r.id}>
-              <strong>{r.name}</strong> — {r.mintChancePct}% chance. Wins an
-              audit {r.hitRatePct}% of the time, share weight {r.weight}, costs{' '}
-              {usdg(r.feedUsdg)} every three days to keep alive.
+            <li
+              key={r.id}
+              style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}
+            >
+              <RankMascot rank={r.id} size={52} />
+              <span>
+                <strong>{r.name}</strong> — {r.mintChancePct}% chance. Wins an
+                audit {r.hitRatePct}% of the time, share weight {r.weight},
+                costs {usdg(r.feedUsdg)} every three days to keep alive.
+              </span>
             </li>
           ))}
         </ul>

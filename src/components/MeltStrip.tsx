@@ -4,6 +4,7 @@ import { num, pct } from '../lib/format'
 import { useMeltingBalance, useRacksStats } from '../hooks/useRacks'
 import { useAccount } from 'wagmi'
 import { DEMO } from '../config/demo'
+import { MeltingCash } from './Mascots'
 
 /**
  * §7: "Always show that RACKS shrinks." This strip sits above every screen and
@@ -31,6 +32,9 @@ export function MeltStrip() {
         <div className="strip-label">
           {isConnected ? 'Your RACKS, right now' : 'Your RACKS'}
         </div>
+        <div className="melt-row">
+          <MeltingCash size={54} />
+          <div style={{ minWidth: 0 }}>
         <div className="balance">
           {live === undefined ? '—' : num(live, 4)}
           <span className="balance-unit">RACKS</span>
@@ -44,6 +48,8 @@ export function MeltStrip() {
             {isConnected ? 'Reading balance…' : 'Connect a wallet to see it.'}
           </div>
         )}
+          </div>
+        </div>
       </div>
 
       <div className="strip-cell">

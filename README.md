@@ -133,9 +133,17 @@ These aren't styling choices — breaking one is a §7 regression:
 
 ## Design
 
-Green safety-paper and ledger stock, form-box layout, red pen for losses, deep
-green for anything protected offshore. Figures are monospace and tabular so a
-ticking balance doesn't reflow. One piece of motion — the reveal — and it
-answers a user action. Not the default crypto dark mode, on purpose: the
-mechanics here are unfriendly and the interface shouldn't look like it's
-hiding that.
+Cartoon heist book. Newsprint-yellow page with a halftone dot screen, white
+panels with 3px ink outlines and hard offset shadows, flat saturated fills,
+no gradients. Display type is Luckiest Guy; everything else is Baloo 2.
+
+The three agent ranks are drawn characters (`src/components/Mascots.tsx`),
+sized to read both at 30px in a table row and at 84px on the mint card. Their
+silhouettes escalate with rarity, so the shape tells you the rank before the
+label does.
+
+One constraint the comic look does not get to break: **all figures use Baloo 2
+with `tabular-nums`.** The balance re-renders four times a second, and the
+usual comic display faces (Bangers, Titan One, Luckiest Guy, Bungee) have
+proportional digits — checked with fontTools — which makes a ticking number
+visibly jitter. Loud shell, steady numbers.

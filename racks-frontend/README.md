@@ -1,0 +1,118 @@
+# RACKS frontend — scaffold
+
+React + TypeScript + Vite + wagmi/viem. Typechecks and builds clean. Nothing is
+connected to a live contract yet because nothing is deployed.
+
+```bash
+npm install
+cp .env.example .env   # fill in addresses after deploy
+npm run dev
+```
+
+## Where things are
+
+```
+src/config/chains.ts      RH Chain mainnet (4663) + testnet (46630)
+src/config/addresses.ts   every address, all env-driven, all nullable
+src/config/protocol.ts    tiers, ranks, fees — display fallbacks only
+src/abi/index.ts          ⚠️ hand-written placeholder ABIs — replace
+src/lib/melt.ts           the demurrage curve, in one place
+src/hooks/                chain clock, balance, locks, agents, epoch, tax
+src/screens/              Wallet, Trade, Cayman, Agents, Dashboard, How it works
+```
+
+## Replace the ABIs first
+
+`src/abi/index.ts` was reconstructed by hand from the build brief because the
+compiled artifacts never arrived. Argument widths, view/pure modifiers, event
+indexing, and the `agents()` return tuple are all guesses. Before touching a
+live deployment:
+
+```bash
+for c in Racks CaymanIslands IRSAgent TaxSwapper TwapOracle WRacks; do
+  jq '.abi' out/$c.sol/$c.json > src/abi/$c.json
+done
+```
+
+then import the JSON and delete the fragments. If a decode fails, fix the
+artifact import — don't tweak a fragment until the error goes away.
+
+## Open questions that need a contract read
+
+Each of these is marked with a comment at the site that depends on it.
+
+1. **Decay curve** (`src/lib/melt.ts`). Is the demurrage index
+   `(1-r)^days` or `exp(-r·days)`? At 6.9%/day they diverge ~0.25% after one
+   day, which is visible on a balance and grows over a session. `MODEL` is set
+   to `discrete`; confirm against `Racks.sol`.
+2. **Epoch indexing** (`src/hooks/useEpoch.ts`). Assumes epoch 0 is the first
+   epoch after `startTime`. The field name `lastAtkEpoch1` suggests attack
+   epochs may be 1-indexed, which is why `canAttackThisEpoch` compares against
+   `epoch + 1`. If either assumption is wrong the audit button enables at the
+   wrong time.
+3. **`agents()` tuple** — assumed `(tier, lastFed, lastAtkEpoch1, revealed,
+   dead)` with `owner` dropped in favour of ERC721 `ownerOf`.
+4. **USDG decimals** — assumed 6 where fees are formatted. Cheap to get wrong
+   by a factor of 10^12.
+5. **`MINT_PRICE()`** — guessed getter name; the brief only gave the 99 USDG
+   figure.
+6. **Native currency** on RH Chain — assumed ETH/18 for gas display.
+
+## Wrapper-vs-direct routing
+
+`VITE_TRADE_TOKEN_ADDRESS` + `VITE_PAIR_ADDRESS` decide what the DEX trades.
+Nothing under `src/` hardcodes RACKS vs wRACKS, so if the rebasing question
+lands on the wrapper pool it's an env change plus wiring the deposit/withdraw
+calls in `Trade.tsx`. `tradesThroughWrapper` already flips the explanatory
+copy.
+
+## What's wired vs. shells
+
+Reads are wired: balances, melt rate, free float, lock positions and
+countdowns, agent roster, epoch clock, audit pool, tax preview, treasury
+pending. Event subscriptions for `Revealed` and `Attacked` are live with
+polling fallback (no websocket assumed).
+
+Writes are shells — buttons render and disable correctly but don't submit.
+They need real ABIs and a settled approval sequence first:
+
+- USDG → CaymanIslands (lock fees), USDG → IRSAgent (mint + feed)
+- RACKS → CaymanIslands (lock pulls RACKS), RACKS → WRacks (if wrapping)
+
+## Known scaffold limits
+
+- Claimable winnings show the **previous epoch only**. Full history needs a
+  `Claimed`/`Attacked` indexer.
+- `agentsOf` is O(n); fine now, swap to a `Transfer`/`Minted` indexer if the
+  population grows. That change is contained to `useAgentRoster`.
+- Reads poll on an interval rather than on every block. Fine for a prototype;
+  block-driven invalidation is a small change in the hooks.
+
+## The honesty invariants
+
+These aren't styling choices — breaking one is a §7 regression:
+
+- `MeltStrip` renders above every screen and is never conditional. Not while
+  loading, not during a pending tx, not on the trade screen.
+- The balance ticks. A frozen number would misrepresent a token that is
+  actively shrinking. It's projected forward from the last on-chain read using
+  the contract's own curve, so it shows what `balanceOf` returns *now*.
+- Transaction amounts use the exact on-chain bigint, never the projected
+  float. The trade screen says so where it matters, and prefers max flows.
+- Unconfigured contracts render "not wired up yet", never `0.00`. A zero that
+  means "no contract" is indistinguishable from a zero that means "no money".
+- The Agents screen opens with the losing case — 75% Junior, the running feed
+  cost, "most agents lose money" — above the mint button, not below it.
+- Trade tax is quoted for the user's actual size in both directions, refreshed
+  every 5s, with the 7%/5% ceilings stated.
+- No countdowns that aren't real contract deadlines. Every clock on screen
+  reads from `unlockAt`, `startTime + EPOCH`, or `lastFed + FEED_INTERVAL`.
+
+## Design
+
+Green safety-paper and ledger stock, form-box layout, red pen for losses, deep
+green for anything protected offshore. Figures are monospace and tabular so a
+ticking balance doesn't reflow. One piece of motion — the reveal — and it
+answers a user action. Not the default crypto dark mode, on purpose: the
+mechanics here are unfriendly and the interface shouldn't look like it's
+hiding that.

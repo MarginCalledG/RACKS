@@ -154,6 +154,16 @@ The tray solves it the way a real OS solves it for the clock: it's chrome, not
 content, and there is no control anywhere that hides it. The full readout also
 appears inside the Wallet window.
 
+The wallpaper is `public/desktop-wallpaper.webp` — Miami-at-dusk pixel art,
+`background-size: cover` with `image-rendering: pixelated` so the browser
+doesn't smooth it when scaling. Teal remains the fallback colour: it paints
+instantly and is what shows if the image fails.
+
+Two constraints if it's ever swapped. The upper-left area must stay dark,
+because the desktop icon labels are white and sit there (this one averages
+51/255 with nothing above 140). And keep it well under 300KB — the source was
+1.7MB, reduced to 149KB as WebP.
+
 The risk page ("Read me first") opens on load. It's the one screen the brief
 wants one click away, and on an empty desktop nothing competes with it.
 

@@ -53,6 +53,8 @@ body {
 
 body {
   margin: 0;
+  /* Teal stays as the fallback: it paints instantly, matches the wallpaper's
+     darkness, and is what shows if the image 404s or is still loading. */
   background: var(--desktop);
   color: var(--ink);
   font-family: var(--ui);
@@ -91,6 +93,12 @@ body {
   position: fixed;
   inset: 0 0 30px 0;
   overflow: hidden;
+  background-color: var(--desktop);
+  background-image: url('/desktop-wallpaper.webp');
+  background-size: cover;
+  background-position: center bottom;
+  /* Pixel art must not be smoothed when the browser scales it up. */
+  image-rendering: pixelated;
 }
 
 .icons {
@@ -121,6 +129,9 @@ body {
 .icon span {
   padding: 1px 3px;
   line-height: 1.2;
+  /* The wallpaper is dark top-left where the icons sit, but a hard shadow
+     keeps labels legible if it's ever swapped for a brighter one. */
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.9), 0 0 3px rgba(0, 0, 0, 0.7);
 }
 
 .icon:hover span {

@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { formatUnits, parseUnits } from 'viem'
 import { Field, Gate, Notice, Pair } from '../components/ui'
-import { LOCK_TIERS, EXPIRED_BLEED_PCT_PER_DAY, tierOf } from '../config/protocol'
+import { EXPIRED_BLEED_PCT_PER_DAY, tierOf } from '../config/protocol'
+import { useProtocolConstants, useTiers } from '../hooks/useProtocolConstants'
+import { ConstantsWarning } from '../components/ConstantsWarning'
 import { useLockPositions } from '../hooks/useCayman'
 import { useMeltingBalance } from '../hooks/useRacks'
 import { duration, num, token, usdg } from '../lib/format'
@@ -10,11 +12,14 @@ export function Cayman() {
   const { positions, potBalance, configured } = useLockPositions()
   const { decimals, live } = useMeltingBalance()
   const [amounts, setAmounts] = useState<Record<number, string>>({})
+  const tiers = useTiers()
+  const { usdgDecimals } = useProtocolConstants()
 
   const expired = positions.filter((p) => p.isExpired)
 
   return (
     <div className="stack">
+      <ConstantsWarning />
       {expired.length > 0 ? (
         <Notice kind="warn">
           <p>
@@ -50,7 +55,7 @@ export function Cayman() {
 
       <Gate needs={['cayman', 'racks', 'usdg']}>
         <div className="grid">
-          {LOCK_TIERS.map((tier) => {
+          {tiers.map((tier) => {
             const pos = positions.find((p) => p.tier === tier.id)
             const feeOnChain = pos?.fee
             const remaining = pos?.secondsRemaining ?? 0
@@ -62,7 +67,7 @@ export function Cayman() {
                 title={`${tier.name} lock`}
                 note={
                   feeOnChain !== undefined
-                    ? `fee ${usdg(Number(formatUnits(feeOnChain, 6)))}`
+                    ? `fee ${usdg(Number(formatUnits(feeOnChain, usdgDecimals)))}`
                     : `fee ${usdg(tier.feeUsdg)}`
                 }
               >

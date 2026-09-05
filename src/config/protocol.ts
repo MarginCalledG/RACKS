@@ -1,8 +1,11 @@
 /**
- * Display constants. Every number here is ALSO read from the contract at
- * runtime (FEE/DURATION/HITRATE/WEIGHT/FEED). These are fallbacks for the
- * pre-deploy state and for copy — the chain value always wins when present,
- * and `useDisclosure` warns if they disagree.
+ * Expected values, used as fallbacks before the contracts are reachable and as
+ * the copy on static pages.
+ *
+ * These are NOT authoritative. `useProtocolConstants` reads the real values
+ * from the contracts and overrides everything here; when a contract value
+ * disagrees with one of these, the difference is shown to the user rather than
+ * quietly resolved. Treat a mismatch as a bug in this file, not in the chain.
  */
 
 export const LOCK_TIERS = [

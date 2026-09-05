@@ -1,10 +1,7 @@
 import { Field, Gate, Notice, Pair } from '../components/ui'
-import {
-  AGENT_RANKS,
-  MAX_AGENTS_PER_WALLET,
-  MINT_PRICE_USDG,
-  rankOf,
-} from '../config/protocol'
+import { MAX_AGENTS_PER_WALLET, MINT_PRICE_USDG, rankOf } from '../config/protocol'
+import { useProtocolConstants, useRanks } from '../hooks/useProtocolConstants'
+import { ConstantsWarning } from '../components/ConstantsWarning'
 import { useAgentRoster, useAsyncResults } from '../hooks/useAgents'
 import { useEpoch } from '../hooks/useEpoch'
 import { useLockPositions } from '../hooks/useCayman'
@@ -18,12 +15,16 @@ export function Agents() {
   const { epoch, secondsRemaining } = useEpoch()
   const { potBalance } = useLockPositions()
   const { decimals } = useMeltingBalance()
+  const ranks = useRanks()
+  const consts = useProtocolConstants()
+  const mintPrice = consts.mintPrice ?? MINT_PRICE_USDG
+  const walletCap = consts.maxPerWallet ?? MAX_AGENTS_PER_WALLET
 
   const epochClock = secondsRemaining === undefined ? null : duration(secondsRemaining)
 
   /** Weighted average feed cost across the rank distribution — the number that
    *  makes the running cost of ownership concrete rather than abstract. */
-  const expectedFeedPer3Days = AGENT_RANKS.reduce(
+  const expectedFeedPer3Days = ranks.reduce(
     (sum, r) => sum + (r.mintChancePct / 100) * r.feedUsdg,
     0,
   )
@@ -32,9 +33,11 @@ export function Agents() {
     <div className="stack">
       {/* §7: never imply guaranteed profit. This is the first thing on the
           screen, not a footnote under the mint button. */}
+      <ConstantsWarning />
+
       <Notice kind="warn">
         <p>
-          This is gambling. Minting costs {usdg(MINT_PRICE_USDG)} and three out
+          This is gambling. Minting costs {usdg(mintPrice)} and three out
           of four agents come back Junior, which wins its audit 30% of the time
           and takes the smallest share when it does. Agents also cost roughly{' '}
           {usdg(expectedFeedPer3Days)} every three days to keep alive, forever.
@@ -46,7 +49,7 @@ export function Agents() {
       <div className="grid">
         <Field
           title="Mint an agent"
-          note={`${usdg(MINT_PRICE_USDG)} in USDG`}
+          note={`${usdg(mintPrice)} in USDG`}
         >
           <table className="rows">
             <thead>
@@ -59,7 +62,7 @@ export function Agents() {
               </tr>
             </thead>
             <tbody>
-              {AGENT_RANKS.map((r) => (
+              {ranks.map((r) => (
                 <tr key={r.id}>
                   <td className={r.id === 2 ? 'special' : undefined}>{r.name}</td>
                   <td className="n">{r.mintChancePct}%</td>
@@ -72,12 +75,12 @@ export function Agents() {
           </table>
 
           <div className="btn-row">
-            <button className="btn" disabled={!configured || living.length >= MAX_AGENTS_PER_WALLET}>
-              Mint for {usdg(MINT_PRICE_USDG)}
+            <button className="btn" disabled={!configured || living.length >= walletCap}>
+              Mint for {usdg(mintPrice)}
             </button>
           </div>
           <p className="muted" style={{ marginTop: '0.5rem' }}>
-            {living.length} of {MAX_AGENTS_PER_WALLET} agent slots used. Rank is
+            {living.length} of {walletCap} agent slots used. Rank is
             random and decided after the transaction confirms — you are buying a
             75% chance of the weakest rank.
           </p>

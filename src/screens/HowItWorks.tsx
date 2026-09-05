@@ -1,11 +1,6 @@
 import { Field } from '../components/ui'
-import {
-  AGENT_RANKS,
-  EXPIRED_BLEED_PCT_PER_DAY,
-  LOCK_TIERS,
-  MINT_PRICE_USDG,
-  TAX,
-} from '../config/protocol'
+import { EXPIRED_BLEED_PCT_PER_DAY, MINT_PRICE_USDG, TAX } from '../config/protocol'
+import { useProtocolConstants, useRanks, useTiers } from '../hooks/useProtocolConstants'
 import { bpsToPct } from '../lib/melt'
 import { usdg } from '../lib/format'
 
@@ -15,6 +10,9 @@ import { usdg } from '../lib/format'
  * page's only job is to be understood.
  */
 export function HowItWorks() {
+  const ranks = useRanks()
+  const tiers = useTiers()
+  const { mintPrice } = useProtocolConstants()
   return (
     <div className="stack">
       <Field title="What RACKS is">
@@ -36,7 +34,7 @@ export function HowItWorks() {
           with a fee in USDG paid up front:
         </p>
         <ul>
-          {LOCK_TIERS.map((t) => (
+          {tiers.map((t) => (
             <li key={t.id}>
               <strong>{t.name}</strong> — {usdg(t.feeUsdg)}.{' '}
               {t.bleedPctPerDay === 0
@@ -60,11 +58,11 @@ export function HowItWorks() {
 
       <Field title="The IRS Agent game">
         <p>
-          This is a casino. Minting an agent costs {usdg(MINT_PRICE_USDG)} and
+          This is a casino. Minting an agent costs {usdg(mintPrice ?? MINT_PRICE_USDG)} and
           the rank you get is random:
         </p>
         <ul>
-          {AGENT_RANKS.map((r) => (
+          {ranks.map((r) => (
             <li key={r.id}>
               <strong>{r.name}</strong> — {r.mintChancePct}% chance. Wins an
               audit {r.hitRatePct}% of the time, share weight {r.weight}, costs{' '}

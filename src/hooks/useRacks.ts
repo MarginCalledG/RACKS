@@ -22,6 +22,7 @@ export function useRacksStats() {
       { ...base, functionName: 'perSecFactor' },
       { ...base, functionName: 'inLaunchWindow' },
       { ...base, functionName: 'maxWallet' },
+      { ...base, functionName: 'mintRenounced' },
     ],
     query: { enabled, refetchInterval: REFETCH_MS },
   })
@@ -33,6 +34,13 @@ export function useRacksStats() {
   const perSecFactor = data?.[4]?.status === 'success' ? (data[4].result as bigint) : undefined
   const inLaunchWindow = data?.[5]?.status === 'success' ? (data[5].result as boolean) : undefined
   const maxWallet = data?.[6]?.status === 'success' ? (data[6].result as bigint) : undefined
+  /**
+   * Whether the owner has permanently given up the ability to mint.
+   * `undefined` means we haven't read it yet — which is NOT the same as false
+   * and must not be rendered as reassurance.
+   */
+  const mintRenounced =
+    data?.[7]?.status === 'success' ? (data[7].result as boolean) : undefined
 
   if (DEMO) {
     return {
@@ -45,6 +53,7 @@ export function useRacksStats() {
       perSecFactor: undefined,
       inLaunchWindow: false,
       maxWallet: undefined,
+      mintRenounced: false,
     }
   }
 
@@ -58,6 +67,7 @@ export function useRacksStats() {
     perSecFactor,
     inLaunchWindow,
     maxWallet,
+    mintRenounced,
   }
 }
 

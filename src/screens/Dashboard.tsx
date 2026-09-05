@@ -3,6 +3,7 @@ import { useReadContract } from 'wagmi'
 import { taxSwapperAbi } from '../abi'
 import { addresses, configured as isConfigured } from '../config/addresses'
 import { Field, Pair } from '../components/ui'
+import { MintStatus } from '../components/MintStatus'
 import { useRacksStats } from '../hooks/useRacks'
 import { useLockPositions } from '../hooks/useCayman'
 import { useEpoch } from '../hooks/useEpoch'
@@ -30,6 +31,7 @@ export function Dashboard() {
 
   return (
     <div className="stack">
+      <MintStatus />
       <div className="grid">
         <Field title="Supply">
           <dl>

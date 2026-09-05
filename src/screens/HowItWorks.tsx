@@ -1,4 +1,5 @@
 import { Field } from '../components/ui'
+import { MintStatus } from '../components/MintStatus'
 import { EXPIRED_BLEED_PCT_PER_DAY, MINT_PRICE_USDG, TAX } from '../config/protocol'
 import { useProtocolConstants, useRanks, useTiers } from '../hooks/useProtocolConstants'
 import { bpsToPct } from '../lib/melt'
@@ -15,6 +16,7 @@ export function HowItWorks() {
   const { mintPrice } = useProtocolConstants()
   return (
     <div className="stack">
+      <MintStatus />
       <Field title="What RACKS is">
         <p>
           RACKS is a token that shrinks. Holding it costs you between 4.2% and
@@ -114,6 +116,10 @@ export function HowItWorks() {
           </li>
           <li>
             Token price is separate from token quantity. Both can fall at once.
+          </li>
+          <li>
+            While minting is un-renounced, the supply can grow at the owner's
+            discretion and dilute you regardless of anything you do.
           </li>
           <li>
             This is unaudited software on a new chain. Smart contracts can have

@@ -19,6 +19,9 @@ export function useRacksStats() {
       { ...base, functionName: 'instantFreeFloatRay' },
       { ...base, functionName: 'totalSupply' },
       { ...base, functionName: 'decimals' },
+      { ...base, functionName: 'perSecFactor' },
+      { ...base, functionName: 'inLaunchWindow' },
+      { ...base, functionName: 'maxWallet' },
     ],
     query: { enabled, refetchInterval: REFETCH_MS },
   })
@@ -27,6 +30,9 @@ export function useRacksStats() {
   const freeFloatRay = data?.[1].status === 'success' ? data[1].result : undefined
   const totalSupply = data?.[2].status === 'success' ? data[2].result : undefined
   const decimals = data?.[3].status === 'success' ? Number(data[3].result) : 18
+  const perSecFactor = data?.[4]?.status === 'success' ? (data[4].result as bigint) : undefined
+  const inLaunchWindow = data?.[5]?.status === 'success' ? (data[5].result as boolean) : undefined
+  const maxWallet = data?.[6]?.status === 'success' ? (data[6].result as bigint) : undefined
 
   if (DEMO) {
     return {
@@ -36,6 +42,9 @@ export function useRacksStats() {
       freeFloatPct: rayToPct(demo.freeFloatRay),
       totalSupply: demo.totalSupply,
       decimals: DEMO_DECIMALS,
+      perSecFactor: undefined,
+      inLaunchWindow: false,
+      maxWallet: undefined,
     }
   }
 
@@ -46,6 +55,9 @@ export function useRacksStats() {
     freeFloatPct: freeFloatRay === undefined ? undefined : rayToPct(freeFloatRay),
     totalSupply,
     decimals,
+    perSecFactor,
+    inLaunchWindow,
+    maxWallet,
   }
 }
 
@@ -60,7 +72,7 @@ export function useMeltingBalance(account?: Address) {
   const { address: connected } = useAccount()
   const owner = account ?? connected
   const enabled = configured('racks') && !!owner && !DEMO
-  const { rateBps, decimals } = useRacksStats()
+  const { rateBps, decimals, perSecFactor } = useRacksStats()
   const { nowSec } = useChainClock()
 
   const { data: onChain, refetch } = useReadContract({
@@ -108,6 +120,7 @@ export function useMeltingBalance(account?: Address) {
           decimals,
           nowSec - anchor.current.atSec,
           rateBps,
+          perSecFactor,
         )
       : undefined
 

@@ -21,42 +21,57 @@ src/hooks/                chain clock, balance, locks, agents, epoch, tax
 src/screens/              Wallet, Trade, Cayman, Agents, Dashboard, How it works
 ```
 
-## Replace the ABIs first
+## ABIs
 
-`src/abi/index.ts` was reconstructed by hand from the build brief because the
-compiled artifacts never arrived. Argument widths, view/pure modifiers, event
-indexing, and the `agents()` return tuple are all guesses. Before touching a
-live deployment:
+`src/abi/*.ts` are generated from the Foundry artifacts, as `as const` modules
+rather than JSON imports — JSON loses the literal types wagmi needs to infer
+call signatures. Do not hand-edit. Regenerate with:
 
 ```bash
 for c in Racks CaymanIslands IRSAgent TaxSwapper TwapOracle WRacks; do
-  jq '.abi' out/$c.sol/$c.json > src/abi/$c.json
+  jq '.abi' out/$c.sol/$c.json > /tmp/$c.json
 done
 ```
 
-then import the JSON and delete the fragments. If a decode fails, fix the
-artifact import — don't tweak a fragment until the error goes away.
+DynamicTax exposes no external functions (its ABI is `[]`), so there is
+nothing for the frontend to call. The dynamic tax is read via
+`TwapOracle.taxBps()`.
 
-## Open questions that need a contract read
 
-Each of these is marked with a comment at the site that depends on it.
+## Resolved by the real ABIs
 
-1. **Decay curve** (`src/lib/melt.ts`). Is the demurrage index
-   `(1-r)^days` or `exp(-r·days)`? At 6.9%/day they diverge ~0.25% after one
-   day, which is visible on a balance and grows over a session. `MODEL` is set
-   to `discrete`; confirm against `Racks.sol`.
-2. **Epoch indexing** (`src/hooks/useEpoch.ts`). Assumes epoch 0 is the first
-   epoch after `startTime`. The field name `lastAtkEpoch1` suggests attack
-   epochs may be 1-indexed, which is why `canAttackThisEpoch` compares against
-   `epoch + 1`. If either assumption is wrong the audit button enables at the
-   wrong time.
-3. **`agents()` tuple** — assumed `(tier, lastFed, lastAtkEpoch1, revealed,
-   dead)` with `owner` dropped in favour of ERC721 `ownerOf`.
-4. **USDG decimals** — assumed 6 where fees are formatted. Cheap to get wrong
-   by a factor of 10^12.
-5. **`MINT_PRICE()`** — guessed getter name; the brief only gave the 99 USDG
-   figure.
-6. **Native currency** on RH Chain — assumed ETH/18 for gas display.
+Every assumption the scaffold was built on has now been checked against the
+artifacts. What the placeholders had wrong:
+
+- **Decay curve** — no longer assumed. `Racks.perSecFactor()` returns the exact
+  RAY-scaled multiplier the contract applies to the index each second, so the
+  displayed balance uses the contract's own arithmetic and cannot drift. The
+  old `(1-r)^days` curve survives only as a fallback if that read fails, with
+  a console warning if the value falls outside a plausible range.
+- **`CaymanIslands.FEE/DURATION/BLEED/unlockAt`** take `uint256`, not `uint8`.
+  Different selector — every one of those calls would have reverted.
+- **`IRSAgent.currentEpoch()` returns `uint32`**, and `claim`, `pending` and
+  `settle` all take `uint32` epochs. Same problem.
+- **`agents()`** returns `uint40 lastFed` and `uint32 lastAtkEpoch1`, which
+  viem decodes as `number`, not `bigint`. The code was treating them as
+  bigint.
+- **`Minted(uint256 id, address owner)`** — the placeholder had the arguments
+  the other way round.
+- **`Attacked`** carries a `uint32` epoch and it is not indexed.
+- **WRacks** uses `wrap`/`unwrap`, not `deposit`/`withdraw`.
+
+Two mechanics the brief never mentioned and the ABI revealed, both now
+surfaced on the Trade screen because they change what a trade does:
+
+- **`inLaunchWindow()` / `LAUNCH_TAX_BPS`** — a fixed higher tax during an
+  opening window.
+- **`maxWallet()` / `MAX_WALLET_BPS`** — a per-wallet cap. A buy that would
+  exceed it reverts, so the user pays gas for a failed transaction.
+
+Still unverified, because no ABI can answer it: **USDG decimals** (assumed 6
+where fees are formatted) and the **epoch numbering** offset — `currentEpoch()`
+exists but whether the first epoch is 0 or 1 needs a testnet read.
+
 
 ## Wrapper-vs-direct routing
 

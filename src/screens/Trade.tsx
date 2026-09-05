@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { parseUnits } from 'viem'
 import { Field, Gate, Notice, Pair } from '../components/ui'
 import { useTradeTax } from '../hooks/useTax'
-import { useMeltingBalance } from '../hooks/useRacks'
-import { num, pct } from '../lib/format'
+import { useMeltingBalance, useRacksStats } from '../hooks/useRacks'
+import { num, pct, token } from '../lib/format'
 import { TAX } from '../config/protocol'
 import { bpsToPct } from '../lib/melt'
 import { tradesThroughWrapper } from '../config/addresses'
@@ -14,6 +14,7 @@ export function Trade() {
   const [side, setSide] = useState<Side>('buy')
   const [amountStr, setAmountStr] = useState('')
   const { decimals, live } = useMeltingBalance()
+  const { inLaunchWindow, maxWallet } = useRacksStats()
 
   let amount: bigint | undefined
   try {
@@ -35,6 +36,30 @@ export function Trade() {
 
   return (
     <div className="stack">
+      {/* Two limits the contracts enforce that nothing in the brief mentioned.
+          Both change what a trade actually does, so they belong here rather
+          than in a docs page nobody opens. */}
+      {inLaunchWindow ? (
+        <Notice kind="warn">
+          <p>
+            Launch window is active. A higher fixed launch tax applies to
+            trades right now instead of the usual dynamic rate, and it ends on
+            a timer set at deployment.
+          </p>
+        </Notice>
+      ) : null}
+
+      {maxWallet !== undefined ? (
+        <Notice kind="setup">
+          <p>
+            There is a maximum wallet size of{' '}
+            <span className="figure-sm">{token(maxWallet, decimals, 0)}</span>{' '}
+            RACKS. A buy that would take you over it reverts — the transaction
+            fails and you pay gas for nothing.
+          </p>
+        </Notice>
+      ) : null}
+
       <Gate needs={['racks', 'router', 'pair', 'spy', 'twapOracle']}>
         <Notice kind="calm">
           <p>

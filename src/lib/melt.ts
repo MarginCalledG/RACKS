@@ -17,11 +17,47 @@
  */
 export type DecayModel = 'discrete' | 'continuous'
 
-export const MODEL: DecayModel = 'discrete' // TODO: verify against Racks.sol
+/**
+ * Fallback only. The contract exposes `perSecFactor()` — the exact multiplier
+ * it applies to the index each second — so `decayFromFactor` below is what the
+ * app actually uses and there is no longer any curve to assume. This constant
+ * survives purely for the case where that read fails.
+ */
+export const MODEL: DecayModel = 'discrete'
 
 const DAY = 86_400
 
-/** Fraction of value remaining after `seconds` at `ratePerDayBps`. */
+const RAY = 1e27
+
+/**
+ * The exact decay, straight from the contract.
+ *
+ * `perSecFactor()` is the RAY-scaled multiplier applied to the demurrage index
+ * once per second, so the value remaining after n seconds is factor^n. Using
+ * it means the displayed balance is not a model of what the contract does —
+ * it is the same arithmetic, and it cannot drift.
+ *
+ * Returns null if the value isn't in a plausible range, which would mean the
+ * RAY scaling assumption is wrong. Callers fall back to the rate-based curve
+ * and the mismatch is visible in the console rather than silently wrong by a
+ * few percent a day.
+ */
+export function decayFromFactor(
+  seconds: number,
+  perSecFactorRay: bigint | undefined,
+): number | null {
+  if (perSecFactorRay === undefined || seconds <= 0) return seconds <= 0 ? 1 : null
+  const f = Number(perSecFactorRay) / RAY
+  // 6.9%/day is ~0.99999917 per second; anything outside this band means the
+  // scale isn't RAY and the result would be nonsense.
+  if (!(f > 0.99999 && f <= 1)) {
+    console.warn('[melt] perSecFactor outside expected range, got', f)
+    return null
+  }
+  return Math.pow(f, seconds)
+}
+
+/** Fallback curve, used only when perSecFactor is unavailable. */
 export function decayFactor(seconds: number, ratePerDayBps: number): number {
   if (seconds <= 0) return 1
   const r = ratePerDayBps / 10_000
@@ -43,9 +79,11 @@ export function projectBalance(
   decimals: number,
   elapsedSec: number,
   ratePerDayBps: number,
+  perSecFactorRay?: bigint,
 ): number {
   const base = Number(onChain) / 10 ** decimals
-  return base * decayFactor(elapsedSec, ratePerDayBps)
+  const exact = decayFromFactor(elapsedSec, perSecFactorRay)
+  return base * (exact ?? decayFactor(elapsedSec, ratePerDayBps))
 }
 
 /** How much a balance loses over a window, in token units. */

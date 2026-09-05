@@ -43,7 +43,7 @@ export function useAgentRoster(account?: Address) {
   })
 
   const idList = (ids ?? []) as readonly bigint[]
-  const prevEpoch = epoch !== undefined && epoch > 0 ? BigInt(epoch - 1) : undefined
+  const prevEpoch = epoch !== undefined && epoch > 0 ? epoch - 1 : undefined
 
   const { data: details, refetch: refetchDetails } = useReadContracts({
     contracts: idList.flatMap((id) => [
@@ -52,7 +52,7 @@ export function useAgentRoster(account?: Address) {
       {
         ...base,
         functionName: 'pending',
-        args: [id, prevEpoch ?? 0n],
+        args: [id, prevEpoch ?? 0],
       } as const,
     ]),
     query: { enabled: enabled && idList.length > 0, refetchInterval: 15_000 },
@@ -63,14 +63,17 @@ export function useAgentRoster(account?: Address) {
     const aliveRes = details?.[i * 3 + 1]
     const pendingRes = details?.[i * 3 + 2]
 
+    // Real tuple: (uint8 tier, uint40 lastFed, uint32 lastAtkEpoch1,
+    // bool revealed, bool dead). uint40/uint32 decode to number, not bigint —
+    // my placeholder had them as uint64 and this silently mistyped them.
     const tuple =
       info?.status === 'success'
-        ? (info.result as readonly [number, bigint, bigint, boolean, boolean])
+        ? (info.result as readonly [number, number, number, boolean, boolean])
         : undefined
 
     const rank = tuple && tuple[3] ? ((tuple[0] as RankId) ?? null) : null
-    const lastFed = tuple ? Number(tuple[1]) : 0
-    const lastAttackEpoch = tuple ? Number(tuple[2]) : 0
+    const lastFed = tuple ? tuple[1] : 0
+    const lastAttackEpoch = tuple ? tuple[2] : 0
     const revealed = tuple ? tuple[3] : false
     const dead = tuple ? tuple[4] : false
     const starvesAt = lastFed + FEED_INTERVAL_SEC
@@ -135,7 +138,7 @@ export function useAgentRoster(account?: Address) {
 }
 
 export type PendingReveal = { id: bigint; rank: RankId }
-export type PendingAudit = { id: bigint; epoch: bigint; hit: boolean }
+export type PendingAudit = { id: bigint; epoch: number; hit: boolean }
 
 /**
  * VRF results land seconds-to-minutes after the transaction. Subscribe and let
@@ -179,7 +182,7 @@ export function useAsyncResults(onChange?: () => void) {
       const next = logs
         .map((l) => l.args)
         .filter(
-          (a): a is { id: bigint; epoch: bigint; hit: boolean } =>
+          (a): a is { id: bigint; epoch: number; hit: boolean } =>
             a.id !== undefined && a.epoch !== undefined && a.hit !== undefined,
         )
       if (next.length) {

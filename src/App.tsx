@@ -50,8 +50,8 @@ const APPS: AppDef[] = [
   },
   {
     id: 'pump',
-    title: 'definitely_taxes.url',
-    label: 'definitely_taxes.url',
+    title: 'porn',
+    label: 'porn',
     icon: ShortcutIcon,
     w: 0,
     h: 0,

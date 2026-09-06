@@ -24,6 +24,7 @@ export function useEpoch() {
       { ...base, functionName: 'currentEpoch' },
       { ...base, functionName: 'EPOCH' },
       { ...base, functionName: 'startTime' },
+      { ...base, functionName: 'CLAIM_WINDOW' },
     ],
     query: { enabled, refetchInterval: 15_000 },
   })
@@ -31,6 +32,12 @@ export function useEpoch() {
   const epoch = data?.[0].status === 'success' ? Number(data[0].result) : undefined
   const epochSec = data?.[1].status === 'success' ? Number(data[1].result) : EPOCH_SEC
   const startTime = data?.[2].status === 'success' ? Number(data[2].result) : undefined
+  /**
+   * How many epochs you have to claim a win before anyone can call
+   * sweepStale() and it's gone. Winnings expiring is not something a user
+   * would assume, so it has to be stated rather than left to be discovered.
+   */
+  const claimWindow = data?.[3]?.status === 'success' ? Number(data[3].result) : undefined
 
   const endsAt =
     epoch !== undefined && startTime !== undefined
@@ -40,6 +47,7 @@ export function useEpoch() {
   if (DEMO) {
     const end = demo.epochStart + (demo.epoch + 1) * demo.epochSec
     return {
+      claimWindow: 3,
       epoch: demo.epoch,
       epochSec: demo.epochSec,
       startTime: demo.epochStart,
@@ -50,6 +58,7 @@ export function useEpoch() {
   }
 
   return {
+    claimWindow,
     epoch,
     epochSec,
     startTime,

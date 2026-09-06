@@ -8,8 +8,11 @@ import { DEMO, demo } from '../config/demo'
 
 export type LockPosition = {
   tier: TierId
-  /** Protected balance in this tier, exact. */
+  /** What you could withdraw now — bleed already applied. */
   amount: bigint
+  /** What you originally locked. Differs from `amount` by the bleed. */
+  principal: bigint
+  lockedAt: number
   /** Unlock timestamp in seconds, 0 when there is no position. */
   unlockAt: number
   /** Fee to open/renew, in USDG base units, straight from the contract. */
@@ -31,7 +34,11 @@ export function useLockPositions(account?: Address) {
     contracts: [
       ...LOCK_TIERS.flatMap((t) => [
         { ...base, functionName: 'claimOf', args: [owner as Address, t.id] } as const,
-        { ...base, functionName: 'unlockAt', args: [owner as Address, t.id] } as const,
+        // position() returns principal, lockedAt and unlockAt together. Kept
+        // alongside claimOf because they answer different questions: claimOf is
+        // what you'd get out now (bleed already applied), principal is what you
+        // put in. Showing only one of them would hide the loss.
+        { ...base, functionName: 'position', args: [owner as Address, t.id] } as const,
         { ...base, functionName: 'FEE', args: [t.id] } as const,
         { ...base, functionName: 'DURATION', args: [t.id] } as const,
       ]),
@@ -48,6 +55,8 @@ export function useLockPositions(account?: Address) {
       return {
         tier: t.id as TierId,
         amount: d.amount,
+        principal: d.amount,
+        lockedAt: d.unlockAt - 86_400,
         unlockAt: d.unlockAt,
         fee: demo.fees[i],
         durationSec: demo.durations[i],
@@ -68,7 +77,13 @@ export function useLockPositions(account?: Address) {
   const positions: LockPosition[] = LOCK_TIERS.map((t, i) => {
     const at = (n: number) => data?.[i * 4 + n]
     const amount = at(0)?.status === 'success' ? (at(0)!.result as bigint) : 0n
-    const unlockAt = at(1)?.status === 'success' ? Number(at(1)!.result as bigint) : 0
+    const pos =
+      at(1)?.status === 'success'
+        ? (at(1)!.result as readonly [bigint, bigint, bigint])
+        : undefined
+    const principal = pos ? pos[0] : 0n
+    const lockedAt = pos ? Number(pos[1]) : 0
+    const unlockAt = pos ? Number(pos[2]) : 0
     const fee = at(2)?.status === 'success' ? (at(2)!.result as bigint) : undefined
     const durationSec =
       at(3)?.status === 'success' ? Number(at(3)!.result as bigint) : undefined
@@ -78,6 +93,8 @@ export function useLockPositions(account?: Address) {
     return {
       tier: t.id as TierId,
       amount,
+      principal,
+      lockedAt,
       unlockAt,
       fee,
       durationSec,

@@ -12,7 +12,7 @@ import { AgentIcon } from '../components/win/Icons'
 export function Agents() {
   const { agents, living, dead, refetch, configured } = useAgentRoster()
   const { reveals, audits, clearReveal, clearAudit } = useAsyncResults(refetch)
-  const { epoch, secondsRemaining } = useEpoch()
+  const { epoch, epochSec, startTime, secondsRemaining, claimWindow } = useEpoch()
   const { potBalance } = useLockPositions()
   const { decimals } = useMeltingBalance()
   const ranks = useRanks()
@@ -21,6 +21,22 @@ export function Agents() {
   const walletCap = consts.maxPerWallet ?? MAX_AGENTS_PER_WALLET
 
   const epochClock = secondsRemaining === undefined ? null : duration(secondsRemaining)
+
+  /**
+   * When an unclaimed win from the previous epoch stops being claimable. The
+   * roster only surfaces the previous epoch, so this is that one deadline.
+   */
+  const claimDeadline = (() => {
+    if (
+      claimWindow === undefined ||
+      epoch === undefined ||
+      startTime === undefined ||
+      epoch === 0
+    )
+      return '—'
+    const endsAt = startTime + (epoch - 1 + claimWindow + 1) * epochSec
+    return duration(endsAt - Date.now() / 1000) ?? 'expired'
+  })()
 
   /** Weighted average feed cost across the rank distribution — the number that
    *  makes the running cost of ownership concrete rather than abstract. */
@@ -96,8 +112,26 @@ export function Agents() {
             />
             <Pair label="Epoch ends in" value={epochClock ?? '—'} />
             <Pair label="Audits per agent" value="1 per 8-hour epoch" />
+            {claimWindow !== undefined ? (
+              <Pair
+                label="Claim winnings within"
+                value={
+                  <span className="loss">
+                    {claimWindow} epoch{claimWindow === 1 ? '' : 's'}
+                  </span>
+                }
+              />
+            ) : null}
             <Pair label="Your living agents" value={String(living.length)} />
           </dl>
+          {claimWindow !== undefined ? (
+            <p className="muted loss" style={{ marginTop: '0.75rem' }}>
+              Winnings are not sent to you — you have to claim them, and they
+              expire. After {claimWindow} epoch
+              {claimWindow === 1 ? '' : 's'} anyone can sweep an unclaimed
+              payout and it is gone for good.
+            </p>
+          ) : null}
           <p className="muted" style={{ marginTop: '0.75rem' }}>
             Winners split the pool pari-mutuel by rank weight. The more agents
             that hit in an epoch, the smaller each share — the pool does not
@@ -166,6 +200,7 @@ export function Agents() {
                   <th>Status</th>
                   <th className="n">Starves in</th>
                   <th className="n">Claimable</th>
+                  <th className="n">Expires</th>
                   <th />
                 </tr>
               </thead>
@@ -206,6 +241,11 @@ export function Agents() {
                         {a.pendingLastEpoch === undefined
                           ? '—'
                           : num(Number(a.pendingLastEpoch) / 10 ** decimals, 2)}
+                      </td>
+                      <td className="n">
+                        {a.pendingLastEpoch && a.pendingLastEpoch > 0n
+                          ? claimDeadline
+                          : '—'}
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>

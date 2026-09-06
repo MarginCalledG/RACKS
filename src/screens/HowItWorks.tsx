@@ -80,6 +80,12 @@ export function HowItWorks() {
           slot until you clear them.
         </p>
         <p>
+          Winnings are not paid out automatically. You have to claim them, and
+          the claim expires — after a fixed number of epochs anyone can sweep an
+          unclaimed payout and it is gone. An agent can win and earn you nothing
+          because you didn't open the page in time.
+        </p>
+        <p>
           Add it up before you play: the mint price, plus feed costs every three
           days for as long as you hold the agent, against a share of a pool you
           are competing for. Most agents do not earn back what they cost.

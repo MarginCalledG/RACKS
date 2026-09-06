@@ -9,6 +9,8 @@ import {
   TradeIcon,
   WalletIcon,
 } from './components/win/Icons'
+import { FolderIcon, ShortcutIcon } from './components/win/Pets'
+import { Documents } from './screens/Documents'
 import { Home } from './screens/Home'
 import { Trade } from './screens/Trade'
 import { Cayman } from './screens/Cayman'
@@ -26,6 +28,8 @@ type AppDef = {
   icon: (p: { size?: number }) => JSX.Element
   w: number
   h: number
+  /** Present on shortcuts: opens a URL in a new tab instead of a window. */
+  href?: string
 }
 
 /** Window titles read like 90s software, deliberately. */
@@ -36,6 +40,23 @@ const APPS: AppDef[] = [
   { id: 'trade', title: 'Trade', label: 'Trade', icon: TradeIcon, w: 660, h: 460 },
   { id: 'dashboard', title: 'Dashboard', label: 'Dashboard', icon: MonitorIcon, w: 700, h: 440 },
   { id: 'how', title: 'Read me first', label: 'Read me first', icon: HelpIcon, w: 640, h: 520 },
+  {
+    id: 'docs',
+    title: 'Super important documents',
+    label: 'Super important documents',
+    icon: FolderIcon,
+    w: 560,
+    h: 420,
+  },
+  {
+    id: 'pump',
+    title: 'definitely_taxes.url',
+    label: 'definitely_taxes.url',
+    icon: ShortcutIcon,
+    w: 0,
+    h: 0,
+    href: 'https://pump.fun',
+  },
 ]
 
 function useNarrow() {
@@ -62,6 +83,12 @@ export default function App() {
     (id: string) => {
       const def = APPS.find((a) => a.id === id)
       if (!def) return
+      // Shortcuts leave the app. noopener/noreferrer because this is a wallet
+      // UI and the destination should get no handle back to this window.
+      if (def.href) {
+        window.open(def.href, '_blank', 'noopener,noreferrer')
+        return
+      }
       setTopZ((z) => z + 1)
       setActiveId(id)
       setWindows((ws) => {
@@ -137,6 +164,8 @@ export default function App() {
         return <Dashboard />
       case 'how':
         return <HowItWorks />
+      case 'docs':
+        return <Documents />
       default:
         return null
     }

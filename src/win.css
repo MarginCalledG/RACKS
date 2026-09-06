@@ -151,6 +151,25 @@ body {
   outline: none;
 }
 
+.filelist {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 104px);
+  gap: 6px;
+}
+
+.fileicon {
+  color: var(--ink);
+}
+
+.fileicon span {
+  text-shadow: none;
+}
+
+.fileicon:hover span {
+  background: var(--sel);
+  color: #fff;
+}
+
 /* Windows ------------------------------------------------------------------- */
 
 .window {

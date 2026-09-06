@@ -6,7 +6,7 @@ import { useMeltingBalance, useRacksStats } from '../hooks/useRacks'
 import { num, pct, token } from '../lib/format'
 import { TAX } from '../config/protocol'
 import { bpsToPct } from '../lib/melt'
-import { tradesThroughWrapper } from '../config/addresses'
+
 
 type Side = 'buy' | 'sell'
 
@@ -60,7 +60,7 @@ export function Trade() {
         </Notice>
       ) : null}
 
-      <Gate needs={['racks', 'router', 'pair', 'spy', 'twapOracle']}>
+      <Gate needs={['racks', 'usdg', 'zap', 'twapOracleV4']}>
         <Notice kind="calm">
           <p>
             Wallet-to-wallet transfers of RACKS are never taxed. The tax below
@@ -116,8 +116,10 @@ export function Trade() {
             </button>
           </div>
           <p className="muted" style={{ marginTop: '0.5rem' }}>
-            Swap execution is wired to the router but disabled until the pair
-            address exists.
+            Execution is not wired yet. It needs the IV4Quoter ABI to show what
+            you'd receive — without a quote there is no honest way to fill in
+            the minimum-output figure that protects you from slippage, and
+            guessing it would be worse than leaving the button off.
           </p>
         </Field>
 
@@ -173,15 +175,20 @@ export function Trade() {
         </Field>
       </div>
 
-      {tradesThroughWrapper ? (
-        <Notice kind="calm">
-          <p>
-            Trades route through wRACKS, a non-rebasing wrapper. Your RACKS is
-            wrapped before the swap and unwrapped after. The wrapper does not
-            melt; the RACKS behind it does.
-          </p>
-        </Notice>
-      ) : null}
+      <Notice kind="calm">
+        <p>
+          Trades take two hops: USDG to SPY, then SPY to wRACKS. wRACKS is a
+          non-rebasing wrapper — your RACKS is wrapped before the swap and
+          unwrapped after, because a balance that shrinks every second can't sit
+          in a pool. The wrapper doesn't melt; the RACKS behind it does, so its
+          value per share falls instead.
+        </p>
+        <p className="muted">
+          One contract call handles all of it. You approve USDG (to buy) or
+          RACKS (to sell) to the Zap contract, and it owns both hops and the
+          wrapping.
+        </p>
+      </Notice>
     </div>
   )
 }

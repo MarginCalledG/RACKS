@@ -73,13 +73,32 @@ where fees are formatted) and the **epoch numbering** offset — `currentEpoch()
 exists but whether the first epoch is 0 or 1 needs a testnet read.
 
 
-## Wrapper-vs-direct routing
+## Trading is Uniswap V4
 
-`VITE_TRADE_TOKEN_ADDRESS` + `VITE_PAIR_ADDRESS` decide what the DEX trades.
-Nothing under `src/` hardcodes RACKS vs wRACKS, so if the rebasing question
-lands on the wrapper pool it's an env change plus wiring the deposit/withdraw
-calls in `Trade.tsx`. `tradesThroughWrapper` already flips the explanatory
-copy.
+Resolved, and it changed the architecture. The pool holds **wRACKS, not
+RACKS**, and the venue is **Uniswap V4, not V2** — the V2 Router02 and pair
+ABIs have been deleted rather than left lying around to be picked up by
+mistake.
+
+The route is USDG <-> SPY <-> wRACKS across two V4 pools. `Zap` owns both hops
+plus the wrap and unwrap, so the frontend calls exactly one function per
+direction (`buyRacks` / `sellRacks`) and never constructs a PoolKey, talks to
+V4Swap, or touches the wrapper. Approvals go to Zap: USDG to buy, RACKS to
+sell.
+
+The trading tax moved to the wrapper. `WRacks` now carries `taxBps()`,
+`taxOracle`, `taxWallet`, `LAUNCH_TAX_BPS` and `TAX_CAP`; the per-trade preview
+comes from `TwapOracleV4.taxBps(amount, isSell)` and the cap is quoted next to
+it so "it can go higher" has a number attached.
+
+`TwapOracle` (the V2 version) is kept in the repo but unused — `TwapOracleV4`
+reads the V4 pool through StateView and is the live one.
+
+## Old note: wrapper-vs-direct routing
+
+Superseded by the section above. The question was which side the rebasing
+problem would land on; it landed on the wrapper, and Zap now hides the whole
+thing behind two functions.
 
 ## What's wired vs. shells
 

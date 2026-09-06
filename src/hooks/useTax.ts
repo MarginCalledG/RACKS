@@ -1,6 +1,6 @@
 import type { Address } from 'viem'
 import { useReadContracts } from 'wagmi'
-import { twapOracleAbi } from '../abi'
+import { twapOracleV4Abi, wracksAbi } from '../abi'
 import { addresses, configured } from '../config/addresses'
 import { bpsToPct } from '../lib/melt'
 import { DEMO, demo } from '../config/demo'
@@ -14,8 +14,12 @@ import { DEMO, demo } from '../config/demo'
  * Refetched aggressively — a stale tax number is a wrong tax number.
  */
 export function useTradeTax(amount: bigint | undefined) {
-  const enabled = configured('twapOracle') && amount !== undefined && amount > 0n && !DEMO
-  const base = { address: addresses.twapOracle as Address, abi: twapOracleAbi } as const
+  const enabled =
+    configured('twapOracleV4') && amount !== undefined && amount > 0n && !DEMO
+  const base = {
+    address: addresses.twapOracleV4 as Address,
+    abi: twapOracleV4Abi,
+  } as const
 
   const { data, isFetching } = useReadContracts({
     contracts: [
@@ -24,6 +28,18 @@ export function useTradeTax(amount: bigint | undefined) {
     ],
     query: { enabled, refetchInterval: 5_000 },
   })
+
+  // The tax now lives on the wrapper, not on Racks. TAX_CAP is the hard
+  // ceiling the contract will not exceed — worth quoting alongside the current
+  // rate so "it can go higher" has a concrete number attached.
+  const { data: capData } = useReadContracts({
+    contracts: [
+      { address: addresses.wracks as Address, abi: wracksAbi, functionName: 'TAX_CAP' },
+    ],
+    query: { enabled: configured('wracks') && !DEMO, staleTime: Infinity },
+  })
+  const capBps =
+    capData?.[0]?.status === 'success' ? Number(capData[0].result) : undefined
 
   const buyBps = data?.[0].status === 'success' ? Number(data[0].result) : undefined
   const sellBps = data?.[1].status === 'success' ? Number(data[1].result) : undefined
@@ -35,6 +51,7 @@ export function useTradeTax(amount: bigint | undefined) {
       buyPct: bpsToPct(demo.buyTaxBps),
       sellPct: bpsToPct(demo.sellTaxBps),
       isFetching: false,
+      cap: 700,
       configured: true,
     }
   }
@@ -45,6 +62,7 @@ export function useTradeTax(amount: bigint | undefined) {
     buyPct: buyBps === undefined ? undefined : bpsToPct(buyBps),
     sellPct: sellBps === undefined ? undefined : bpsToPct(sellBps),
     isFetching,
-    configured: configured('twapOracle'),
+    cap: capBps,
+    configured: configured('twapOracleV4'),
   }
 }

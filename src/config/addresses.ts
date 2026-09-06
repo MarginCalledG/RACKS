@@ -31,22 +31,21 @@ export const addresses = {
   taxSwapper: env('VITE_TAXSWAPPER_ADDRESS'),
   twapOracle: env('VITE_TWAPORACLE_ADDRESS'),
   wracks: env('VITE_WRACKS_ADDRESS'),
-  router: env('VITE_ROUTER_ADDRESS'),
-  pair: env('VITE_PAIR_ADDRESS'),
+  zap: env('VITE_ZAP_ADDRESS'),
+  v4Swap: env('VITE_V4SWAP_ADDRESS'),
+  twapOracleV4: env('VITE_TWAPORACLEV4_ADDRESS'),
   spy: env('VITE_SPY_ADDRESS'),
   usdg: env('VITE_USDG_ADDRESS') ?? (isTestnet ? null : USDG_MAINNET),
 } as const
 
 /**
- * The token the DEX actually trades. Open question on the protocol side is
- * whether the pool holds RACKS or wRACKS (rebasing vs V2). Nothing downstream
- * of here cares which — set VITE_TRADE_TOKEN_ADDRESS and repoint the pair.
+ * Resolved: the pool holds wRACKS, not RACKS, and trading is Uniswap V4.
+ *
+ * The route is USDG <-> SPY <-> wRACKS across two V4 pools. Zap owns both hops
+ * plus the wrap/unwrap, so the frontend calls one function per direction and
+ * never touches a pool key, a router or the wrapper directly.
  */
-export const tradeToken: Address | null =
-  env('VITE_TRADE_TOKEN_ADDRESS') ?? addresses.racks
-
-export const tradesThroughWrapper =
-  !!addresses.wracks && tradeToken?.toLowerCase() === addresses.wracks.toLowerCase()
+export const tradesThroughWrapper = true
 
 export type ContractKey = keyof typeof addresses
 

@@ -7,6 +7,10 @@
  *     jq '.abi' out/$c.sol/$c.json > src/abi/$c.json
  *   done
  *
+ * NOTE: trading is Uniswap V4, not V2. There is no router or pair ABI here on
+ * purpose — the V2 Router02 and pair fragments were removed when the V4
+ * contracts landed. User-facing trades go through Zap.buyRacks/sellRacks.
+ *
  * NOTE: DynamicTax's ABI is an empty array — it exposes no external functions,
  * so there is nothing for the frontend to call. The dynamic tax is read
  * through TwapOracle.taxBps() instead.
@@ -20,6 +24,9 @@ export { irsAgentAbi } from './IRSAgent'
 export { taxSwapperAbi } from './TaxSwapper'
 export { twapOracleAbi } from './TwapOracle'
 export { wracksAbi } from './WRacks'
+export { twapOracleV4Abi } from './TwapOracleV4'
+export { v4SwapAbi } from './V4Swap'
+export { zapAbi } from './Zap'
 
 /** Plain ERC20, for USDG and SPY. */
 export const erc20Abi = parseAbi([
@@ -34,16 +41,4 @@ export const erc20Abi = parseAbi([
   'event Transfer(address indexed from, address indexed to, uint256 value)',
 ])
 
-/** Canonical Uniswap V2 Router02 subset — standard, not protocol-specific. */
-export const routerAbi = parseAbi([
-  'function getAmountsOut(uint256 amountIn, address[] path) view returns (uint256[] amounts)',
-  'function getAmountsIn(uint256 amountOut, address[] path) view returns (uint256[] amounts)',
-  'function swapExactTokensForTokensSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline)',
-  'function swapExactTokensForTokens(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline) returns (uint256[] amounts)',
-])
 
-export const pairAbi = parseAbi([
-  'function getReserves() view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)',
-  'function token0() view returns (address)',
-  'function token1() view returns (address)',
-])

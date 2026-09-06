@@ -120,13 +120,6 @@ export default function App() {
     [topZ],
   )
 
-  // The risk page opens on first load. It is the one screen the brief wants a
-  // click away, and on an empty desktop nothing else competes with it.
-  useEffect(() => {
-    open('how')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   const focus = useCallback(
     (id: string) => {
       setTopZ((z) => z + 1)

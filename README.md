@@ -203,6 +203,8 @@ because the desktop icon labels are white and sit there (this one averages
 16/255 with nothing above 140). And keep it well under 300KB — the source was
 1.7MB, reduced to 108KB as WebP.
 
-The risk page ("Read me first") opens on load. It's the one screen the brief
-wants one click away, and on an empty desktop nothing competes with it.
+Nothing opens on load — the desktop starts clean, which is both the authentic
+behaviour and what was asked for. The risk page stays one click away via its
+desktop icon, which is what the brief actually requires, and the melt readout
+in the tray is visible before any window is opened.
 

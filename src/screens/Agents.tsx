@@ -5,6 +5,7 @@ import { ConstantsWarning } from '../components/ConstantsWarning'
 import { useAgentRoster, useAsyncResults } from '../hooks/useAgents'
 import { useEpoch } from '../hooks/useEpoch'
 import { useLockPositions } from '../hooks/useCayman'
+import { useAgentPot } from '../hooks/useAgentPot'
 import { useMeltingBalance } from '../hooks/useRacks'
 import { duration, num, token, usdg } from '../lib/format'
 import { AgentIcon } from '../components/win/Icons'
@@ -13,7 +14,9 @@ export function Agents() {
   const { agents, living, dead, refetch, configured } = useAgentRoster()
   const { reveals, audits, clearReveal, clearAudit } = useAsyncResults(refetch)
   const { epoch, epochSec, startTime, secondsRemaining, claimWindow } = useEpoch()
-  const { potBalance } = useLockPositions()
+  const { potBalance: potFallback } = useLockPositions()
+  const { potPreview } = useAgentPot()
+  const potBalance = potPreview ?? potFallback
   const { decimals } = useMeltingBalance()
   const ranks = useRanks()
   const consts = useProtocolConstants()

@@ -14,7 +14,7 @@ import { DEMO, demo } from '../config/demo'
 
 export function Dashboard() {
   const { rateBps, freeFloatPct, totalSupply, decimals } = useRacksStats()
-  const { potBalance } = useLockPositions()
+  const { potBalance, potSettled } = useLockPositions()
   const { epoch, secondsRemaining } = useEpoch()
 
   const { data: treasuryPending } = useReadContract({
@@ -86,10 +86,17 @@ export function Dashboard() {
               label="Pool size"
               value={potBalance === undefined ? '—' : token(potBalance, decimals, 2)}
             />
+            <Pair
+              label="of which collected"
+              value={potSettled === undefined ? '—' : token(potSettled, decimals, 2)}
+            />
             <Pair label="Epoch ends in" value={clock ?? '—'} />
           </dl>
           <p className="muted" style={{ marginTop: '0.75rem' }}>
             Fed by the bleed on short locks and the penalty on expired ones.
+            Bleed only moves into the pool when someone harvests, so the pool
+            size shown includes amounts accrued but not yet collected — that
+            gap is the difference between the two figures above.
           </p>
         </Field>
 

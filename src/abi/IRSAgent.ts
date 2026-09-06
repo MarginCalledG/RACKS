@@ -299,6 +299,19 @@ export const irsAgentAbi = [
   },
   {
     "type": "function",
+    "name": "autoHarvest",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "balanceOf",
     "inputs": [
       {
@@ -538,6 +551,19 @@ export const irsAgentAbi = [
   },
   {
     "type": "function",
+    "name": "potPreview",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "rawFulfill",
     "inputs": [
       {
@@ -663,6 +689,19 @@ export const irsAgentAbi = [
         "name": "approved",
         "type": "bool",
         "internalType": "bool"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setAutoHarvest",
+    "inputs": [
+      {
+        "name": "n",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],

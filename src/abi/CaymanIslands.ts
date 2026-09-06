@@ -82,6 +82,43 @@ export const caymanAbi = [
   },
   {
     "type": "function",
+    "name": "activeAt",
+    "inputs": [
+      {
+        "name": "i",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "u",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "b",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "activeCount",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "agent",
     "inputs": [],
     "outputs": [
@@ -161,6 +198,31 @@ export const caymanAbi = [
         "name": "b",
         "type": "uint8",
         "internalType": "uint8"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "harvestAll",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "harvestBatch",
+    "inputs": [
+      {
+        "name": "from",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "count",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],
@@ -251,6 +313,19 @@ export const caymanAbi = [
     "outputs": [
       {
         "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "potLive",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "live",
         "type": "uint256",
         "internalType": "uint256"
       }

@@ -43,6 +43,12 @@ export function useLockPositions(account?: Address) {
         { ...base, functionName: 'DURATION', args: [t.id] } as const,
       ]),
       { ...base, functionName: 'potBalance' } as const,
+      // potBalance() is what has actually been collected. Bleed from open
+      // positions only lands in the pot when someone calls harvest, so
+      // potLive() — collected plus accrued-but-unharvested — is the figure
+      // that describes what agents are really competing for. Showing the
+      // smaller number would understate the pot.
+      { ...base, functionName: 'potLive' } as const,
     ],
     query: { enabled, refetchInterval: 10_000 },
   })
@@ -68,6 +74,7 @@ export function useLockPositions(account?: Address) {
     return {
       positions: demoPositions,
       potBalance: demo.potBalance,
+      potSettled: demo.potBalance,
       isLoading: false,
       refetch,
       configured: true,
@@ -105,8 +112,21 @@ export function useLockPositions(account?: Address) {
   })
 
   const potIndex = LOCK_TIERS.length * 4
-  const potBalance =
+  const potSettled =
     data?.[potIndex]?.status === 'success' ? (data[potIndex].result as bigint) : undefined
+  const potLive =
+    data?.[potIndex + 1]?.status === 'success'
+      ? (data[potIndex + 1].result as bigint)
+      : undefined
 
-  return { positions, potBalance, isLoading, refetch, configured: enabled }
+  return {
+    positions,
+    /** Live figure — use this for display. */
+    potBalance: potLive ?? potSettled,
+    /** Collected only, excludes unharvested bleed. */
+    potSettled,
+    isLoading,
+    refetch,
+    configured: enabled,
+  }
 }

@@ -9,13 +9,23 @@ import { useMeltingBalance } from '../hooks/useRacks'
 import { duration, num, token, usdg } from '../lib/format'
 
 export function Cayman() {
-  const { positions, potBalance, configured } = useLockPositions()
+  const { positions, potBalance, minLock, configured } = useLockPositions()
   const { decimals, live } = useMeltingBalance()
   const [amounts, setAmounts] = useState<Record<number, string>>({})
   const tiers = useTiers()
   const { usdgDecimals } = useProtocolConstants()
 
   const expired = positions.filter((p) => p.isExpired)
+
+  /** Guard the button rather than letting the contract reject it. */
+  const belowMin = (raw: string | undefined) => {
+    if (minLock === undefined || !raw) return false
+    try {
+      return parseUnits(raw, decimals) < minLock
+    } catch {
+      return true
+    }
+  }
 
   return (
     <div className="stack">
@@ -46,6 +56,13 @@ export function Cayman() {
           that IRS Agents fight over — including the penalty on an expired
           position.
         </p>
+        {minLock !== undefined ? (
+          <p className="muted">
+            Minimum lock: {token(minLock, decimals, 2)} RACKS. Anything smaller
+            is rejected by the contract — the transaction fails and you pay gas
+            for nothing.
+          </p>
+        ) : null}
         {live !== undefined ? (
           <p className="muted">
             Unlocked and melting right now: {num(live, 4)} RACKS.
@@ -131,7 +148,11 @@ export function Cayman() {
                 <div className="btn-row">
                   <button
                     className="btn"
-                    disabled={!configured || !amounts[tier.id]}
+                    disabled={
+                      !configured ||
+                      !amounts[tier.id] ||
+                      belowMin(amounts[tier.id])
+                    }
                     onClick={() => {
                       // Wired at deploy: approve RACKS -> CaymanIslands and
                       // USDG -> CaymanIslands, then lock(tier, amount).

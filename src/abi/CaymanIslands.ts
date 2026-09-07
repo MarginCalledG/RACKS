@@ -82,6 +82,19 @@ export const caymanAbi = [
   },
   {
     "type": "function",
+    "name": "MIN_LOCK",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "activeAt",
     "inputs": [
       {

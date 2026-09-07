@@ -68,9 +68,15 @@ surfaced on the Trade screen because they change what a trade does:
 - **`maxWallet()` / `MAX_WALLET_BPS`** — a per-wallet cap. A buy that would
   exceed it reverts, so the user pays gas for a failed transaction.
 
-Still unverified, because no ABI can answer it: **USDG decimals** (assumed 6
-where fees are formatted) and the **epoch numbering** offset — `currentEpoch()`
-exists but whether the first epoch is 0 or 1 needs a testnet read.
+Both of the remaining unknowns are now closed. USDG decimals are read from the
+token. Epoch timing comes from `IRSAgent.epochEnd(e)` rather than being
+computed from `startTime` and `EPOCH`, which removes the guess about whether
+epoch numbering starts at 0 or 1 — that guess drove when the Audit button
+unlocked, so it was not cosmetic.
+
+The one scale assumption left is `HITRATE`: uint16 fits both `30` and `3000`
+for 30%, so values above 100 are treated as basis points. Worth one testnet
+read to confirm.
 
 
 ## Trading is Uniswap V4

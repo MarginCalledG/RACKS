@@ -1,5 +1,5 @@
 import type { Address } from 'viem'
-import { useReadContracts } from 'wagmi'
+import { useReadContract, useReadContracts } from 'wagmi'
 import { irsAgentAbi } from '../abi'
 import { addresses, configured } from '../config/addresses'
 import { EPOCH_SEC } from '../config/protocol'
@@ -7,12 +7,14 @@ import { useChainClock } from './useChainClock'
 import { DEMO, demo } from '../config/demo'
 
 /**
- * Epoch numbering assumption: epoch N spans
- *   [startTime + N*EPOCH, startTime + (N+1)*EPOCH)
- * i.e. the first epoch after startTime is epoch 0. If IRSAgent.sol is
- * 1-indexed (the field name `lastAtkEpoch1` hints it might be) the countdown
- * will be one full epoch out. VERIFY against currentEpoch() on testnet:
- * the value shown here should match the contract exactly, not approximately.
+ * Epoch timing now comes from the contract. `epochEnd(e)` returns the exact
+ * timestamp an epoch closes, which replaces the arithmetic this hook used to
+ * do from startTime and EPOCH — and with it the guess about whether epoch
+ * numbering starts at 0 or 1. That guess drove when the Audit button
+ * unlocked, so getting it wrong was not cosmetic.
+ *
+ * SETTLE_GRACE is the delay after an epoch closes before it can be settled,
+ * i.e. how long a winner waits before there is anything to claim.
  */
 export function useEpoch() {
   const enabled = configured('irsAgent') && !DEMO
@@ -25,6 +27,7 @@ export function useEpoch() {
       { ...base, functionName: 'EPOCH' },
       { ...base, functionName: 'startTime' },
       { ...base, functionName: 'CLAIM_WINDOW' },
+      { ...base, functionName: 'SETTLE_GRACE' },
     ],
     query: { enabled, refetchInterval: 15_000 },
   })
@@ -38,16 +41,23 @@ export function useEpoch() {
    * would assume, so it has to be stated rather than left to be discovered.
    */
   const claimWindow = data?.[3]?.status === 'success' ? Number(data[3].result) : undefined
+  const settleGrace = data?.[4]?.status === 'success' ? Number(data[4].result) : undefined
 
-  const endsAt =
-    epoch !== undefined && startTime !== undefined
-      ? startTime + (epoch + 1) * epochSec
-      : undefined
+  // Exact close time, straight from the contract.
+  const { data: endData } = useReadContract({
+    ...base,
+    functionName: 'epochEnd',
+    args: epoch !== undefined ? [epoch] : undefined,
+    query: { enabled: enabled && epoch !== undefined, refetchInterval: 30_000 },
+  })
+
+  const endsAt = endData !== undefined ? Number(endData) : undefined
 
   if (DEMO) {
     const end = demo.epochStart + (demo.epoch + 1) * demo.epochSec
     return {
       claimWindow: 3,
+      settleGrace: 600,
       epoch: demo.epoch,
       epochSec: demo.epochSec,
       startTime: demo.epochStart,
@@ -59,6 +69,7 @@ export function useEpoch() {
 
   return {
     claimWindow,
+    settleGrace,
     epoch,
     epochSec,
     startTime,

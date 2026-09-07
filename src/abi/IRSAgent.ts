@@ -146,6 +146,19 @@ export const irsAgentAbi = [
   },
   {
     "type": "function",
+    "name": "SETTLE_GRACE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "WEIGHT",
     "inputs": [
       {
@@ -362,6 +375,25 @@ export const irsAgentAbi = [
   },
   {
     "type": "function",
+    "name": "epochEnd",
+    "inputs": [
+      {
+        "name": "e",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "epochUnclaimed",
     "inputs": [
       {
@@ -407,6 +439,19 @@ export const irsAgentAbi = [
         "name": "",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "harvestCursor",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -536,6 +581,25 @@ export const irsAgentAbi = [
       },
       {
         "name": "e",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "pendingAttacks",
+    "inputs": [
+      {
+        "name": "",
         "type": "uint32",
         "internalType": "uint32"
       }

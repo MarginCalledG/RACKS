@@ -49,6 +49,7 @@ export function useLockPositions(account?: Address) {
       // that describes what agents are really competing for. Showing the
       // smaller number would understate the pot.
       { ...base, functionName: 'potLive' } as const,
+      { ...base, functionName: 'MIN_LOCK' } as const,
     ],
     query: { enabled, refetchInterval: 10_000 },
   })
@@ -75,6 +76,7 @@ export function useLockPositions(account?: Address) {
       positions: demoPositions,
       potBalance: demo.potBalance,
       potSettled: demo.potBalance,
+      minLock: 1000000000000000000n,
       isLoading: false,
       refetch,
       configured: true,
@@ -119,8 +121,15 @@ export function useLockPositions(account?: Address) {
       ? (data[potIndex + 1].result as bigint)
       : undefined
 
+  const minLock =
+    data?.[potIndex + 2]?.status === 'success'
+      ? (data[potIndex + 2].result as bigint)
+      : undefined
+
   return {
     positions,
+    /** Smallest amount the contract will accept. Below it, lock() reverts. */
+    minLock,
     /** Live figure — use this for display. */
     potBalance: potLive ?? potSettled,
     /** Collected only, excludes unharvested bleed. */

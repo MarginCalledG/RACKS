@@ -13,7 +13,8 @@ import { AgentIcon } from '../components/win/Icons'
 export function Agents() {
   const { agents, living, dead, refetch, configured } = useAgentRoster()
   const { reveals, audits, clearReveal, clearAudit } = useAsyncResults(refetch)
-  const { epoch, epochSec, startTime, secondsRemaining, claimWindow } = useEpoch()
+  const { epoch, epochSec, startTime, secondsRemaining, claimWindow, settleGrace } =
+    useEpoch()
   const { potBalance: potFallback } = useLockPositions()
   const { potPreview } = useAgentPot()
   const potBalance = potPreview ?? potFallback
@@ -115,6 +116,12 @@ export function Agents() {
             />
             <Pair label="Epoch ends in" value={epochClock ?? '—'} />
             <Pair label="Audits per agent" value="1 per 8-hour epoch" />
+            {settleGrace !== undefined ? (
+              <Pair
+                label="Settles after epoch ends"
+                value={duration(settleGrace) ?? 'immediately'}
+              />
+            ) : null}
             {claimWindow !== undefined ? (
               <Pair
                 label="Claim winnings within"

@@ -23,6 +23,7 @@ export function useAgentPot() {
       { ...base, functionName: 'potPreview' },
       { ...base, functionName: 'allocatedPot' },
       { ...base, functionName: 'autoHarvest' },
+      { ...base, functionName: 'paused' },
     ],
     query: { enabled: configured('irsAgent') && !DEMO, refetchInterval: 15_000 },
   })
@@ -32,6 +33,7 @@ export function useAgentPot() {
       potPreview: demo.potBalance,
       allocatedPot: 0n,
       autoHarvest: 5,
+      paused: false,
     }
   }
 
@@ -39,5 +41,12 @@ export function useAgentPot() {
     potPreview: data?.[0]?.status === 'success' ? (data[0].result as bigint) : undefined,
     allocatedPot: data?.[1]?.status === 'success' ? (data[1].result as bigint) : undefined,
     autoHarvest: data?.[2]?.status === 'success' ? Number(data[2].result) : undefined,
+    /**
+     * The owner can halt the game. Minting, feeding and auditing all stop,
+     * while feed timers presumably keep running — so a pause can cost you
+     * agents you already paid for. Stated rather than left to be discovered
+     * when a button silently reverts.
+     */
+    paused: data?.[3]?.status === 'success' ? (data[3].result as boolean) : undefined,
   }
 }

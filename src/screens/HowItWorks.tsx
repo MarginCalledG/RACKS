@@ -124,6 +124,11 @@ export function HowItWorks() {
             Token price is separate from token quantity. Both can fall at once.
           </li>
           <li>
+            The operator can pause the agent game. Mints, feeds, audits and
+            claims stop; feed timers do not, so a long enough pause can kill
+            agents you have already paid for.
+          </li>
+          <li>
             While minting is un-renounced, the supply can grow at the owner's
             discretion and dilute you regardless of anything you do.
           </li>

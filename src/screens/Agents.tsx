@@ -16,7 +16,7 @@ export function Agents() {
   const { epoch, epochSec, startTime, secondsRemaining, claimWindow, settleGrace } =
     useEpoch()
   const { potBalance: potFallback } = useLockPositions()
-  const { potPreview } = useAgentPot()
+  const { potPreview, paused } = useAgentPot()
   const potBalance = potPreview ?? potFallback
   const { decimals } = useMeltingBalance()
   const ranks = useRanks()
@@ -54,6 +54,17 @@ export function Agents() {
       {/* §7: never imply guaranteed profit. This is the first thing on the
           screen, not a footnote under the mint button. */}
       <ConstantsWarning />
+
+      {paused ? (
+        <Notice kind="warn">
+          <p>
+            The game is paused by the operator. Minting, feeding, audits and
+            claims are all unavailable until it is unpaused. Feed timers are not
+            paused with it, so agents can starve while you are unable to feed
+            them.
+          </p>
+        </Notice>
+      ) : null}
 
       <Notice kind="warn">
         <p>
@@ -95,7 +106,7 @@ export function Agents() {
           </table>
 
           <div className="btn-row">
-            <button className="btn" disabled={!configured || living.length >= walletCap}>
+            <button className="btn" disabled={!configured || paused || living.length >= walletCap}>
               Mint for {usdg(mintPrice)}
             </button>
           </div>
@@ -264,7 +275,7 @@ export function Agents() {
                               <button
                                 className="btn secondary"
                                 style={{ fontSize: '0.75rem', padding: '0.1875rem 0.5rem' }}
-                                disabled={!a.canAttackThisEpoch || !a.revealed}
+                                disabled={!a.canAttackThisEpoch || !a.revealed || paused}
                                 title={
                                   a.canAttackThisEpoch
                                     ? 'Run an audit this epoch'

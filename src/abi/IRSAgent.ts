@@ -604,6 +604,19 @@ export const irsAgentAbi = [
   },
   {
     "type": "function",
+    "name": "paused",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "pending",
     "inputs": [
       {
@@ -798,6 +811,19 @@ export const irsAgentAbi = [
         "name": "n",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setPaused",
+    "inputs": [
+      {
+        "name": "p_",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "outputs": [],

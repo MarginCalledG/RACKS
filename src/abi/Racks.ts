@@ -28,32 +28,6 @@ export const racksAbi = [
   },
   {
     "type": "function",
-    "name": "F_FF0",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "F_FF1",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "LAUNCH_TAX_BPS",
     "inputs": [],
     "outputs": [

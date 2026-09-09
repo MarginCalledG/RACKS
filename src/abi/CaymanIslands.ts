@@ -187,6 +187,19 @@ export const caymanAbi = [
   },
   {
     "type": "function",
+    "name": "expiredPrincipal",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "fundPot",
     "inputs": [
       {

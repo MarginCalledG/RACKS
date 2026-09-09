@@ -50,6 +50,10 @@ export function useLockPositions(account?: Address) {
       // smaller number would understate the pot.
       { ...base, functionName: 'potLive' } as const,
       { ...base, functionName: 'MIN_LOCK' } as const,
+      // Principal sitting in positions whose lock has run out. This is the
+      // slice of user money currently paying the 2%/day expiry penalty into
+      // the pot — money being lost to inattention rather than to a choice.
+      { ...base, functionName: 'expiredPrincipal' } as const,
     ],
     query: { enabled, refetchInterval: 10_000 },
   })
@@ -77,6 +81,7 @@ export function useLockPositions(account?: Address) {
       potBalance: demo.potBalance,
       potSettled: demo.potBalance,
       minLock: 1000000000000000000n,
+      expiredPrincipal: 41200000000000000000000n,
       isLoading: false,
       refetch,
       configured: true,
@@ -126,10 +131,16 @@ export function useLockPositions(account?: Address) {
       ? (data[potIndex + 2].result as bigint)
       : undefined
 
+  const expiredPrincipal =
+    data?.[potIndex + 3]?.status === 'success'
+      ? (data[potIndex + 3].result as bigint)
+      : undefined
+
   return {
     positions,
     /** Smallest amount the contract will accept. Below it, lock() reverts. */
     minLock,
+    expiredPrincipal,
     /** Live figure — use this for display. */
     potBalance: potLive ?? potSettled,
     /** Collected only, excludes unharvested bleed. */

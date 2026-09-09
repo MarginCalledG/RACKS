@@ -305,8 +305,8 @@ export function Agents() {
             </table>
           )}
           <p className="muted" style={{ marginTop: '0.75rem' }}>
-            Claimable shows the previous epoch only. A full history needs an
-            event indexer — see the notes in the README.
+            Claimable covers every epoch that still has something in it, summed.
+            Epochs already swept are gone and are not listed.
           </p>
         </Field>
       </Gate>

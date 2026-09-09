@@ -178,6 +178,38 @@ export const irsAgentAbi = [
   },
   {
     "type": "function",
+    "name": "activeCursor",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "activeEpochs",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "admin",
     "inputs": [],
     "outputs": [
@@ -802,7 +834,7 @@ export const irsAgentAbi = [
     "name": "settled",
     "inputs": [
       {
-        "name": "",
+        "name": "e",
         "type": "uint32",
         "internalType": "uint32"
       }

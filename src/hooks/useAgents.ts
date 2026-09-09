@@ -6,6 +6,7 @@ import { addresses, configured } from '../config/addresses'
 import { FEED_INTERVAL_SEC, type RankId } from '../config/protocol'
 import { useChainClock } from './useChainClock'
 import { useEpoch } from './useEpoch'
+import { useActiveEpochs } from './useActiveEpochs'
 import { DEMO, demo } from '../config/demo'
 
 export type Agent = {
@@ -19,7 +20,10 @@ export type Agent = {
   secondsUntilStarving: number
   lastAttackEpoch: number | null
   canAttackThisEpoch: boolean
+  /** Total claimable across all still-open epochs. */
   pendingLastEpoch: bigint | undefined
+  /** Which epochs that total came from, so each can be claimed individually. */
+  claims: { epoch: number; amount: bigint }[]
 }
 
 /**
@@ -33,6 +37,7 @@ export function useAgentRoster(account?: Address) {
   const enabled = configured('irsAgent') && !!owner && !DEMO
   const { nowSec } = useChainClock(1000)
   const { epoch } = useEpoch()
+  const { epochs: activeEpochs } = useActiveEpochs()
   const base = { address: addresses.irsAgent as Address, abi: irsAgentAbi } as const
 
   const { data: ids, refetch: refetchIds } = useReadContract({
@@ -43,25 +48,42 @@ export function useAgentRoster(account?: Address) {
   })
 
   const idList = (ids ?? []) as readonly bigint[]
-  const prevEpoch = epoch !== undefined && epoch > 0 ? epoch - 1 : undefined
+  /**
+   * Check every epoch that still has claimable state, not just the last one.
+   * A win two epochs old was previously invisible, and invisible plus an
+   * expiry window means lost.
+   */
+  const claimEpochs =
+    activeEpochs.length > 0
+      ? activeEpochs
+      : epoch !== undefined && epoch > 0
+        ? [epoch - 1]
+        : []
 
   const { data: details, refetch: refetchDetails } = useReadContracts({
     contracts: idList.flatMap((id) => [
       { ...base, functionName: 'agents', args: [id] } as const,
       { ...base, functionName: 'alive', args: [id] } as const,
-      {
-        ...base,
-        functionName: 'pending',
-        args: [id, prevEpoch ?? 0],
-      } as const,
+      ...claimEpochs.map(
+        (e) => ({ ...base, functionName: 'pending', args: [id, e] }) as const,
+      ),
     ]),
     query: { enabled: enabled && idList.length > 0, refetchInterval: 15_000 },
   })
 
+  const stride = 2 + claimEpochs.length
   const agents: Agent[] = idList.map((id, i) => {
-    const info = details?.[i * 3]
-    const aliveRes = details?.[i * 3 + 1]
-    const pendingRes = details?.[i * 3 + 2]
+    const info = details?.[i * stride]
+    const aliveRes = details?.[i * stride + 1]
+    /** Sum across every still-claimable epoch, plus which ones have value. */
+    const claims = claimEpochs
+      .map((e, k) => {
+        const r = details?.[i * stride + 2 + k]
+        const v = r?.status === 'success' ? (r.result as bigint) : 0n
+        return { epoch: e, amount: v }
+      })
+      .filter((c) => c.amount > 0n)
+    const pendingTotal = claims.reduce((sum, c) => sum + c.amount, 0n)
 
     // Real tuple: (uint8 tier, uint40 lastFed, uint32 lastAtkEpoch1,
     // bool revealed, bool dead). uint40/uint32 decode to number, not bigint —
@@ -92,8 +114,8 @@ export function useAgentRoster(account?: Address) {
       // attacked", and epoch N is stored as N+1. VERIFY.
       canAttackThisEpoch:
         epoch === undefined ? false : lastAttackEpoch !== epoch + 1,
-      pendingLastEpoch:
-        pendingRes?.status === 'success' ? (pendingRes.result as bigint) : undefined,
+      pendingLastEpoch: pendingTotal > 0n ? pendingTotal : undefined,
+      claims,
     }
   })
 
@@ -117,6 +139,7 @@ export function useAgentRoster(account?: Address) {
         lastAttackEpoch: d.atkOffset ? demo.epoch + 1 : null,
         canAttackThisEpoch: d.atkOffset === 0 && d.revealed && !d.dead,
         pendingLastEpoch: d.pending,
+        claims: d.pending > 0n ? [{ epoch: demo.epoch - 1, amount: d.pending }] : [],
       }
     })
     return {

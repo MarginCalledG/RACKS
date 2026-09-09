@@ -121,8 +121,8 @@ They need real ABIs and a settled approval sequence first:
 
 ## Known scaffold limits
 
-- Claimable winnings show the **previous epoch only**. Full history needs a
-  `Claimed`/`Attacked` indexer.
+- Claimable winnings are found via `activeCursor`/`activeEpochs`, capped at the
+  6 most recent open epochs. No event indexer needed.
 - `agentsOf` is O(n); fine now, swap to a `Transfer`/`Minted` indexer if the
   population grows. That change is contained to `useAgentRoster`.
 - Reads poll on an interval rather than on every block. Fine for a prototype;

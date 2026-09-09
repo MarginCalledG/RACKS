@@ -9,6 +9,11 @@ export const twapOracleAbi = [
         "name": "_pair",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "_racks",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "nonpayable"
@@ -106,10 +111,41 @@ export const twapOracleAbi = [
   },
   {
     "type": "function",
+    "name": "racksIs0",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "racksReserve",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "kr",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "setPair",
     "inputs": [
       {
         "name": "p",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_racks",
         "type": "address",
         "internalType": "address"
       }

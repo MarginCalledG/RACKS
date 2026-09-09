@@ -15,7 +15,7 @@ import { useRacksStats } from '../hooks/useRacks'
  * outcomes.
  */
 export function MintStatus() {
-  const { mintRenounced, configured } = useRacksStats()
+  const { mintRenounced, exemptControlRenounced, configured } = useRacksStats()
   if (!configured) return null
 
   if (mintRenounced === undefined) {
@@ -29,25 +29,36 @@ export function MintStatus() {
     )
   }
 
-  if (mintRenounced) {
-    return (
-      <Notice kind="calm">
-        <p>
-          Minting has been renounced. No new RACKS can be created by anyone,
-          including the deployer. The supply only ever shrinks from here.
-        </p>
-      </Notice>
-    )
-  }
-
   return (
-    <Notice kind="warn">
-      <p>
-        Minting has not been renounced. The owner can create new RACKS at any
-        time, which would dilute everyone holding it. Locking does not protect
-        against this — a fully protected 14-day position keeps its tokens and
-        still loses value if the supply grows.
-      </p>
-    </Notice>
+    <>
+      {mintRenounced ? (
+        <Notice kind="calm">
+          <p>
+            Minting has been renounced. No new RACKS can be created by anyone,
+            including the deployer. The supply only ever shrinks from here.
+          </p>
+        </Notice>
+      ) : (
+        <Notice kind="warn">
+          <p>
+            Minting has not been renounced. The owner can create new RACKS at
+            any time, which would dilute everyone holding it. Locking does not
+            protect against this — a fully protected 14-day position keeps its
+            tokens and still loses value if the supply grows.
+          </p>
+        </Notice>
+      )}
+
+      {exemptControlRenounced === false ? (
+        <Notice kind="warn">
+          <p>
+            Exemption control has not been renounced. The owner can still
+            exempt an address from the trading tax and the wallet cap, meaning
+            some wallets can be given terms you don't get. This is a separate
+            power from minting.
+          </p>
+        </Notice>
+      ) : null}
+    </>
   )
 }

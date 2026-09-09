@@ -1,6 +1,6 @@
 import type { Address } from 'viem'
 import { useReadContracts } from 'wagmi'
-import { twapOracleV4Abi, wracksAbi } from '../abi'
+import { taxHookAbi, twapOracleV4Abi } from '../abi'
 import { addresses, configured } from '../config/addresses'
 import { bpsToPct } from '../lib/melt'
 import { DEMO, demo } from '../config/demo'
@@ -29,17 +29,31 @@ export function useTradeTax(amount: bigint | undefined) {
     query: { enabled, refetchInterval: 5_000 },
   })
 
-  // The tax now lives on the wrapper, not on Racks. TAX_CAP is the hard
-  // ceiling the contract will not exceed — worth quoting alongside the current
-  // rate so "it can go higher" has a concrete number attached.
-  const { data: capData } = useReadContracts({
+  // The tax has moved again: it now lives in a Uniswap V4 hook, not on the
+  // wrapper and not on Racks. WRacks lost TAX_CAP entirely, so the previous
+  // read here pointed at a function that no longer exists.
+  //
+  // wiringOk() is the hook's own deploy sanity check — if it is false the hook
+  // is misconfigured and the tax the UI quotes may not be what actually gets
+  // charged, which is worth knowing before signing anything.
+  const hook = { address: addresses.taxHook as Address, abi: taxHookAbi } as const
+  const { data: hookData } = useReadContracts({
     contracts: [
-      { address: addresses.wracks as Address, abi: wracksAbi, functionName: 'TAX_CAP' },
+      { ...hook, functionName: 'TAX_CAP' },
+      { ...hook, functionName: 'LAUNCH_TAX_BPS' },
+      { ...hook, functionName: 'baseBps' },
+      { ...hook, functionName: 'wiringOk' },
     ],
-    query: { enabled: configured('wracks') && !DEMO, staleTime: Infinity },
+    query: { enabled: configured('taxHook') && !DEMO, staleTime: 60_000 },
   })
   const capBps =
-    capData?.[0]?.status === 'success' ? Number(capData[0].result) : undefined
+    hookData?.[0]?.status === 'success' ? Number(hookData[0].result) : undefined
+  const launchTaxBps =
+    hookData?.[1]?.status === 'success' ? Number(hookData[1].result) : undefined
+  const baseBps =
+    hookData?.[2]?.status === 'success' ? Number(hookData[2].result) : undefined
+  const wiringOk =
+    hookData?.[3]?.status === 'success' ? (hookData[3].result as boolean) : undefined
 
   const buyBps = data?.[0].status === 'success' ? Number(data[0].result) : undefined
   const sellBps = data?.[1].status === 'success' ? Number(data[1].result) : undefined
@@ -52,6 +66,9 @@ export function useTradeTax(amount: bigint | undefined) {
       sellPct: bpsToPct(demo.sellTaxBps),
       isFetching: false,
       cap: 700,
+      launchTaxBps: 1500,
+      baseBps: 400,
+      wiringOk: true,
       configured: true,
     }
   }
@@ -63,6 +80,9 @@ export function useTradeTax(amount: bigint | undefined) {
     sellPct: sellBps === undefined ? undefined : bpsToPct(sellBps),
     isFetching,
     cap: capBps,
+    launchTaxBps,
+    baseBps,
+    wiringOk,
     configured: configured('twapOracleV4'),
   }
 }

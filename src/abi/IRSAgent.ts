@@ -818,6 +818,19 @@ export const irsAgentAbi = [
   },
   {
     "type": "function",
+    "name": "settledThrough",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "shares",
     "inputs": [
       {

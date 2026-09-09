@@ -23,6 +23,7 @@ export function useRacksStats() {
       { ...base, functionName: 'inLaunchWindow' },
       { ...base, functionName: 'maxWallet' },
       { ...base, functionName: 'mintRenounced' },
+      { ...base, functionName: 'exemptControlRenounced' },
     ],
     query: { enabled, refetchInterval: REFETCH_MS },
   })
@@ -41,6 +42,13 @@ export function useRacksStats() {
    */
   const mintRenounced =
     data?.[7]?.status === 'success' ? (data[7].result as boolean) : undefined
+  /**
+   * Whether the owner can still exempt addresses from tax and the wallet cap.
+   * Un-renounced, an address can be given terms nobody else gets — which is a
+   * separate lever from minting and deserves its own line.
+   */
+  const exemptControlRenounced =
+    data?.[8]?.status === 'success' ? (data[8].result as boolean) : undefined
 
   if (DEMO) {
     return {
@@ -54,6 +62,7 @@ export function useRacksStats() {
       inLaunchWindow: false,
       maxWallet: undefined,
       mintRenounced: false,
+      exemptControlRenounced: false,
     }
   }
 
@@ -68,6 +77,7 @@ export function useRacksStats() {
     inLaunchWindow,
     maxWallet,
     mintRenounced,
+    exemptControlRenounced,
   }
 }
 

@@ -23,7 +23,7 @@ export function Trade() {
     amount = undefined
   }
 
-  const { buyPct, sellPct, buyBps, sellBps, configured: oracleReady } =
+  const { buyPct, sellPct, buyBps, sellBps, wiringOk, configured: oracleReady } =
     useTradeTax(amount)
 
   const activeBps = side === 'buy' ? buyBps : sellBps
@@ -56,6 +56,16 @@ export function Trade() {
             <span className="figure-sm">{token(maxWallet, decimals, 0)}</span>{' '}
             RACKS. A buy that would take you over it reverts — the transaction
             fails and you pay gas for nothing.
+          </p>
+        </Notice>
+      ) : null}
+
+      {wiringOk === false ? (
+        <Notice kind="warn">
+          <p>
+            The tax hook reports that it is not correctly wired up. Until that
+            is fixed, the tax shown below may not be what actually gets charged
+            on a trade. Don't trade on these numbers.
           </p>
         </Notice>
       ) : null}

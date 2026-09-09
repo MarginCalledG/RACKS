@@ -27,6 +27,7 @@ export { wracksAbi } from './WRacks'
 export { twapOracleV4Abi } from './TwapOracleV4'
 export { v4SwapAbi } from './V4Swap'
 export { zapAbi } from './Zap'
+export { taxHookAbi } from './TaxHook'
 
 /** Plain ERC20, for USDG and SPY. */
 export const erc20Abi = parseAbi([

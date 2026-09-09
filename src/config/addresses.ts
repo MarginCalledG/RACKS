@@ -34,6 +34,7 @@ export const addresses = {
   zap: env('VITE_ZAP_ADDRESS'),
   v4Swap: env('VITE_V4SWAP_ADDRESS'),
   twapOracleV4: env('VITE_TWAPORACLEV4_ADDRESS'),
+  taxHook: env('VITE_TAXHOOK_ADDRESS'),
   spy: env('VITE_SPY_ADDRESS'),
   usdg: env('VITE_USDG_ADDRESS') ?? (isTestnet ? null : USDG_MAINNET),
 } as const

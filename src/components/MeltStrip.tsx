@@ -52,7 +52,7 @@ export function MeltStrip() {
           {ratePct === undefined ? '—' : pct(ratePct, 2)}
         </div>
         <div className="muted">
-          per day · floats {bpsToPct(MELT.minBps)}–{bpsToPct(MELT.maxBps)}%
+          per day, unlocked · floats {bpsToPct(MELT.minBps)}–{bpsToPct(MELT.maxBps)}%
           {rateBps !== undefined
             ? ` · half gone in ${halfLifeDays(rateBps).toFixed(1)} days`
             : ''}

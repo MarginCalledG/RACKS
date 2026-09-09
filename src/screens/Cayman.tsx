@@ -97,7 +97,9 @@ export function Cayman() {
                       tier.bleedPctPerDay === 0 ? (
                         <span className="protected">0%/day</span>
                       ) : (
-                        <span className="loss">{tier.bleedPctPerDay}%/day</span>
+                        <span className="loss">
+                          {tier.bleedPctPerDay.toFixed(2)}%/day
+                        </span>
                       )
                     }
                   />

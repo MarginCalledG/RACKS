@@ -28,6 +28,12 @@ export function HowItWorks() {
           The rate depends on how much of the total supply is locked. When more
           is locked, the rate falls; when more is free, it rises.
         </p>
+        <p>
+          There is no single melt rate. Unlocked balances, each lock length and
+          the liquidity pool are separate classes with their own rates, and the
+          figures on the lock screen are read per class from the contract
+          rather than quoted from a table.
+        </p>
       </Field>
 
       <Field title="Locking">

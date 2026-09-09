@@ -73,7 +73,10 @@ export function useProtocolConstants() {
     contracts: ([0, 1, 2] as const).flatMap((i) => [
       { ...cayman, functionName: 'FEE', args: [BigInt(i)] } as const,
       { ...cayman, functionName: 'DURATION', args: [BigInt(i)] } as const,
-      { ...cayman, functionName: 'BLEED', args: [BigInt(i)] } as const,
+      // BLEED is gone. POS maps a tier to a position class, and the melt rate
+      // for that class comes from Racks.ratePerDayBpsFor — the rate is no
+      // longer one global number.
+      { ...cayman, functionName: 'POS', args: [BigInt(i)] } as const,
     ]),
     query: { ...shared, enabled: hasCayman && !DEMO },
   })
@@ -132,8 +135,27 @@ export function useProtocolConstants() {
       id: i,
       feeUsdg: toUsdg(big(caymanData, b)),
       durationSec: nr(caymanData, b + 1),
-      bleedBps: nr(caymanData, b + 2),
+      posClass: nr(caymanData, b + 2),
+      bleedBps: nr(rateData, i),
     }
+  })
+
+  /** Position class per tier, then the melt rate for each of those classes. */
+  const tierPos = ([0, 1, 2] as const).map((i) => nr(caymanData, i * 3 + 2))
+
+  const { data: rateData } = useReadContracts({
+    contracts: tierPos.map(
+      (pos) =>
+        ({
+          ...racks,
+          functionName: 'ratePerDayBpsFor',
+          args: [pos ?? 0],
+        }) as const,
+    ),
+    query: {
+      ...shared,
+      enabled: hasRacks && !DEMO && tierPos.every((p) => p !== undefined),
+    },
   })
 
   const launchTaxBps = nr(miscData, 0)
@@ -206,10 +228,13 @@ export function useTiers() {
     ...t,
     feeUsdg: c.tiers[i].feeUsdg ?? t.feeUsdg,
     durationSec: c.tiers[i].durationSec ?? t.durationSec,
+    // Real per-class melt rate. The shipped constants were an approximation
+    // of a number the contract now states directly.
     bleedPctPerDay:
       c.tiers[i].bleedBps !== undefined
         ? c.tiers[i].bleedBps! / 100
         : t.bleedPctPerDay,
+    posClass: c.tiers[i].posClass,
     fromChain: c.tiers[i].feeUsdg !== undefined,
   }))
 }

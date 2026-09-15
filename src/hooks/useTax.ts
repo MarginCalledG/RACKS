@@ -1,62 +1,52 @@
 import type { Address } from 'viem'
-import { useReadContracts } from 'wagmi'
-import { taxHookAbi, twapOracleV4Abi } from '../abi'
+import { useReadContract, useReadContracts } from 'wagmi'
+import { racksAbi, twapOracleAbi } from '../abi'
 import { addresses, configured } from '../config/addresses'
 import { bpsToPct } from '../lib/melt'
 import { DEMO, demo } from '../config/demo'
 
 /**
- * The exact tax for THIS trade size, both directions, so the panel can show
- * the cost of the trade the user is about to make rather than a generic band.
- * Size matters: tax is dynamic, so quoting 4% on a preview and charging 7% on
- * execution would be the dark pattern §7 rules out.
+ * The tax for a specific trade size, resolved in the same order as
+ * `Racks._taxBps` — not by asking the oracle and hoping it matches.
  *
- * Refetched aggressively — a stale tax number is a wrong tax number.
+ *   1. inLaunchWindow() -> flat 800 bps, both directions, oracle not consulted
+ *   2. otherwise TwapOracle.taxBps(amount, isSell), capped at 800 bps
+ *   3. oracle missing or reverting -> 400 bps
+ *
+ * Mirroring the contract matters more than it looks: quoting a number the
+ * token won't actually charge is exactly the failure the pre-trade disclosure
+ * exists to prevent, and a naive read fails in the direction that flatters us.
  */
+export const TAX_CAP_BPS = 800
+export const TAX_FALLBACK_BPS = 400
+
+const clamp = (bps: number) => Math.min(bps, TAX_CAP_BPS)
+
 export function useTradeTax(amount: bigint | undefined) {
-  const enabled =
-    configured('twapOracleV4') && amount !== undefined && amount > 0n && !DEMO
-  const base = {
-    address: addresses.twapOracleV4 as Address,
-    abi: twapOracleV4Abi,
-  } as const
+  const hasOracle = configured('twapOracle')
+  const hasRacks = configured('racks')
+  const live = amount !== undefined && amount > 0n && !DEMO
+
+  const { data: launch } = useReadContract({
+    address: addresses.racks as Address,
+    abi: racksAbi,
+    functionName: 'inLaunchWindow',
+    query: { enabled: hasRacks && !DEMO, refetchInterval: 15_000 },
+  })
+
+  const inLaunchWindow = launch === undefined ? undefined : (launch as boolean)
+  // In the launch window the token bypasses the oracle, so neither do we.
+  const askOracle = live && hasOracle && inLaunchWindow === false
+
+  const base = { address: addresses.twapOracle as Address, abi: twapOracleAbi } as const
 
   const { data, isFetching } = useReadContracts({
     contracts: [
       { ...base, functionName: 'taxBps', args: [amount ?? 0n, false] },
       { ...base, functionName: 'taxBps', args: [amount ?? 0n, true] },
     ],
-    query: { enabled, refetchInterval: 5_000 },
+    query: { enabled: askOracle, refetchInterval: 5_000 },
   })
-
-  // The tax has moved again: it now lives in a Uniswap V4 hook, not on the
-  // wrapper and not on Racks. WRacks lost TAX_CAP entirely, so the previous
-  // read here pointed at a function that no longer exists.
-  //
-  // wiringOk() is the hook's own deploy sanity check — if it is false the hook
-  // is misconfigured and the tax the UI quotes may not be what actually gets
-  // charged, which is worth knowing before signing anything.
-  const hook = { address: addresses.taxHook as Address, abi: taxHookAbi } as const
-  const { data: hookData } = useReadContracts({
-    contracts: [
-      { ...hook, functionName: 'TAX_CAP' },
-      { ...hook, functionName: 'LAUNCH_TAX_BPS' },
-      { ...hook, functionName: 'baseBps' },
-      { ...hook, functionName: 'wiringOk' },
-    ],
-    query: { enabled: configured('taxHook') && !DEMO, staleTime: 60_000 },
-  })
-  const capBps =
-    hookData?.[0]?.status === 'success' ? Number(hookData[0].result) : undefined
-  const launchTaxBps =
-    hookData?.[1]?.status === 'success' ? Number(hookData[1].result) : undefined
-  const baseBps =
-    hookData?.[2]?.status === 'success' ? Number(hookData[2].result) : undefined
-  const wiringOk =
-    hookData?.[3]?.status === 'success' ? (hookData[3].result as boolean) : undefined
-
-  const buyBps = data?.[0].status === 'success' ? Number(data[0].result) : undefined
-  const sellBps = data?.[1].status === 'success' ? Number(data[1].result) : undefined
 
   if (DEMO) {
     return {
@@ -64,13 +54,30 @@ export function useTradeTax(amount: bigint | undefined) {
       sellBps: demo.sellTaxBps,
       buyPct: bpsToPct(demo.buyTaxBps),
       sellPct: bpsToPct(demo.sellTaxBps),
+      inLaunchWindow: false,
       isFetching: false,
-      cap: 700,
-      launchTaxBps: 1500,
-      baseBps: 400,
-      wiringOk: true,
+      cap: TAX_CAP_BPS,
       configured: true,
     }
+  }
+
+  let buyBps: number | undefined
+  let sellBps: number | undefined
+
+  if (inLaunchWindow === true) {
+    buyBps = TAX_CAP_BPS
+    sellBps = TAX_CAP_BPS
+  } else if (live) {
+    const read = (i: number) => {
+      const r = data?.[i]
+      if (r?.status === 'success') return clamp(Number(r.result))
+      // A reverting or absent oracle is not "no tax" — fall back as the token
+      // does. Still loading stays undefined so the UI can say so.
+      if (r?.status === 'failure' || !hasOracle) return TAX_FALLBACK_BPS
+      return undefined
+    }
+    buyBps = read(0)
+    sellBps = read(1)
   }
 
   return {
@@ -78,11 +85,9 @@ export function useTradeTax(amount: bigint | undefined) {
     sellBps,
     buyPct: buyBps === undefined ? undefined : bpsToPct(buyBps),
     sellPct: sellBps === undefined ? undefined : bpsToPct(sellBps),
+    inLaunchWindow,
     isFetching,
-    cap: capBps,
-    launchTaxBps,
-    baseBps,
-    wiringOk,
-    configured: configured('twapOracleV4'),
+    cap: TAX_CAP_BPS,
+    configured: hasOracle,
   }
 }

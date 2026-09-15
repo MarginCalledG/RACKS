@@ -79,26 +79,42 @@ for 30%, so values above 100 are treated as basis points. Worth one testnet
 read to confirm.
 
 
-## Trading is Uniswap V4
+## Trading is Uniswap V2
 
-Resolved, and it changed the architecture. The pool holds **wRACKS, not
-RACKS**, and the venue is **Uniswap V4, not V2** — the V2 Router02 and pair
-ABIs have been deleted rather than left lying around to be picked up by
-mistake.
+One hop, RACKS directly in the pair, no wrapper. The tax lives in the token
+itself, so approvals go to the router and `Zap`, `wRACKS`, `TaxHook`,
+`V4Swap`, `TwapOracleV4` and `TaxSwapper` are all gone from the contracts.
+Their ABIs are kept for reference and marked as removed — they must not be
+wired up again.
 
-The route is USDG <-> SPY <-> wRACKS across two V4 pools. `Zap` owns both hops
-plus the wrap and unwrap, so the frontend calls exactly one function per
-direction (`buyRacks` / `sellRacks`) and never constructs a PoolKey, talks to
-V4Swap, or touches the wrapper. Approvals go to Zap: USDG to buy, RACKS to
-sell.
+**The router's quote is not the answer.** RACKS is fee-on-transfer and the
+router knows nothing about the tax, so `getAmountsOut` has to be corrected —
+and the correction goes on opposite sides depending on direction:
 
-The trading tax moved to the wrapper. `WRacks` now carries `taxBps()`,
-`taxOracle`, `taxWallet`, `LAUNCH_TAX_BPS` and `TAX_CAP`; the per-trade preview
-comes from `TwapOracleV4.taxBps(amount, isSell)` and the cap is quoted next to
-it so "it can go higher" has a number attached.
+- **Buy**: the pair sends the full amount and the token taxes it on the way to
+  the buyer, so the tax applies to the router's *output*.
+- **Sell**: the tax comes off on the way *into* the pool, so the pair receives
+  less than the user sends and `getAmountsOut(amountIn)` overstates the result.
+  Quote the net amount instead.
 
-`TwapOracle` (the V2 version) is kept in the repo but unused — `TwapOracleV4`
-reads the V4 pool through StateView and is the live one.
+Both directions are a ~4.2% error if uncorrected, in the flattering direction.
+The logic lives once in `useTrade` rather than at each call site.
+
+Tax is resolved in the same order as `Racks._taxBps`: launch window means a
+flat 800 bps with the oracle bypassed entirely; otherwise the oracle capped at
+800; a missing or reverting oracle falls back to 400.
+
+Three contract behaviours the screen guards against, all from the audit:
+
+- **Max sell needs a buffer.** The balance melts in discrete 30-minute steps
+  and `_move` reverts rather than clamping, so signing the displayed figure
+  fails if the transaction lands after a step. Max leaves 0.5% behind; a step
+  at the top rate is 0.15%.
+- **Launch-hour wallet cap** is cumulative per address and cannot be reset by
+  moving tokens out. Checked before the buy rather than discovered in a revert.
+- **Allowance is overdrawn by rounding** in the scaled-balance model, so
+  approvals are padded 1% rather than exact.
+
 
 ## Old note: wrapper-vs-direct routing
 

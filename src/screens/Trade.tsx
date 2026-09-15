@@ -1,76 +1,66 @@
 import { useState } from 'react'
-import { parseUnits } from 'viem'
+import { formatUnits, parseUnits } from 'viem'
+import { useAccount, useReadContract } from 'wagmi'
+import { erc20Abi } from '../abi'
+import { addresses } from '../config/addresses'
 import { Field, Gate, Notice, Pair } from '../components/ui'
-import { useTradeTax } from '../hooks/useTax'
 import { useMeltingBalance, useRacksStats } from '../hooks/useRacks'
+import { applyMaxSellMargin, useTrade, type Side } from '../hooks/useTrade'
 import { num, pct, token } from '../lib/format'
-import { TAX } from '../config/protocol'
 import { bpsToPct } from '../lib/melt'
 
-
-type Side = 'buy' | 'sell'
+const SLIPPAGE_OPTIONS = [50, 100, 300] as const
 
 export function Trade() {
   const [side, setSide] = useState<Side>('buy')
   const [amountStr, setAmountStr] = useState('')
-  const { decimals, live } = useMeltingBalance()
+  const [slippageBps, setSlippageBps] = useState<number>(100)
+  const { address: account } = useAccount()
+  const { decimals, onChain: racksBalance } = useMeltingBalance()
   const { inLaunchWindow, maxWallet } = useRacksStats()
+
+  // SPY is the input on a buy; the mock is 18 decimals but read it anyway.
+  const { data: spyDecimalsRaw } = useReadContract({
+    address: addresses.spy ?? undefined,
+    abi: erc20Abi,
+    functionName: 'decimals',
+    query: { enabled: !!addresses.spy },
+  })
+  const spyDecimals = spyDecimalsRaw === undefined ? 18 : Number(spyDecimalsRaw)
+
+  const inDecimals = side === 'buy' ? spyDecimals : decimals
+  const outDecimals = side === 'buy' ? decimals : spyDecimals
+  const inSymbol = side === 'buy' ? 'SPY' : 'RACKS'
+  const outSymbol = side === 'buy' ? 'RACKS' : 'SPY'
 
   let amount: bigint | undefined
   try {
-    amount = amountStr ? parseUnits(amountStr, decimals) : undefined
+    amount = amountStr ? parseUnits(amountStr, inDecimals) : undefined
   } catch {
     amount = undefined
   }
 
-  const { buyPct, sellPct, buyBps, sellBps, wiringOk, configured: oracleReady } =
-    useTradeTax(amount)
+  const t = useTrade(side, amount, slippageBps)
+  const { quote } = t
 
-  const activeBps = side === 'buy' ? buyBps : sellBps
-  const activePct = side === 'buy' ? buyPct : sellPct
-  const parsedAmount = amountStr ? Number(amountStr) : 0
-  const taxCost =
-    activeBps !== undefined && parsedAmount > 0
-      ? (parsedAmount * activeBps) / 10_000
-      : undefined
+  const setMaxSell = () => {
+    if (racksBalance === undefined) return
+    setAmountStr(formatUnits(applyMaxSellMargin(racksBalance), decimals))
+  }
 
   return (
     <div className="stack">
-      {/* Two limits the contracts enforce that nothing in the brief mentioned.
-          Both change what a trade actually does, so they belong here rather
-          than in a docs page nobody opens. */}
-      {inLaunchWindow ? (
+      {t.inLaunchWindow ? (
         <Notice kind="warn">
           <p>
-            Launch window is active. A higher fixed launch tax applies to
-            trades right now instead of the usual dynamic rate, and it ends on
-            a timer set at deployment.
+            Launch window is active. Tax is a flat {bpsToPct(t.taxCapBps)}% in
+            both directions — the oracle is bypassed — and a cumulative
+            per-wallet cap applies to buys.
           </p>
         </Notice>
       ) : null}
 
-      {maxWallet !== undefined ? (
-        <Notice kind="setup">
-          <p>
-            There is a maximum wallet size of{' '}
-            <span className="figure-sm">{token(maxWallet, decimals, 0)}</span>{' '}
-            RACKS. A buy that would take you over it reverts — the transaction
-            fails and you pay gas for nothing.
-          </p>
-        </Notice>
-      ) : null}
-
-      {wiringOk === false ? (
-        <Notice kind="warn">
-          <p>
-            The tax hook reports that it is not correctly wired up. Until that
-            is fixed, the tax shown below may not be what actually gets charged
-            on a trade. Don't trade on these numbers.
-          </p>
-        </Notice>
-      ) : null}
-
-      <Gate needs={['racks', 'usdg', 'zap', 'twapOracleV4']}>
+      <Gate needs={['racks', 'spy', 'router', 'pair', 'twapOracle']}>
         <Notice kind="calm">
           <p>
             Wallet-to-wallet transfers of RACKS are never taxed. The tax below
@@ -81,24 +71,30 @@ export function Trade() {
 
       <div className="grid">
         <Field title={side === 'buy' ? 'Buy RACKS with SPY' : 'Sell RACKS for SPY'}>
-          <div className="btn-row" style={{ marginTop: 0, marginBottom: '0.75rem' }}>
+          <div className="btn-row" style={{ marginTop: 0, marginBottom: 10 }}>
             <button
-              className={`btn ${side === 'buy' ? '' : 'secondary'}`}
-              onClick={() => setSide('buy')}
+              className="btn"
+              disabled={side === 'buy'}
+              onClick={() => {
+                setSide('buy')
+                setAmountStr('')
+              }}
             >
               Buy
             </button>
             <button
-              className={`btn ${side === 'sell' ? '' : 'secondary'}`}
-              onClick={() => setSide('sell')}
+              className="btn"
+              disabled={side === 'sell'}
+              onClick={() => {
+                setSide('sell')
+                setAmountStr('')
+              }}
             >
               Sell
             </button>
           </div>
 
-          <label htmlFor="amt">
-            Amount {side === 'buy' ? 'of SPY to spend' : 'of RACKS to sell'}
-          </label>
+          <label htmlFor="amt">Amount of {inSymbol}</label>
           <input
             id="amt"
             type="text"
@@ -108,95 +104,149 @@ export function Trade() {
             onChange={(e) => setAmountStr(e.target.value)}
           />
 
-          {side === 'sell' && live !== undefined ? (
-            <p className="muted" style={{ marginTop: '0.5rem' }}>
-              You hold {num(live, 4)} RACKS. That figure is falling as you read
-              it — a sell settles at the next block, so it will consume
-              marginally less than shown. Use “sell max” to let the contract
-              read the balance itself.
+          {side === 'sell' && racksBalance !== undefined ? (
+            <p className="muted" style={{ marginTop: 6 }}>
+              You hold {token(racksBalance, decimals)} RACKS.{' '}
+              <button className="btn" style={{ minWidth: 0 }} onClick={setMaxSell}>
+                Max
+              </button>{' '}
+              leaves 0.5% behind on purpose: the balance melts in 30-minute
+              steps and the token reverts rather than clamping, so selling the
+              exact displayed figure fails if the transaction lands after a
+              step.
             </p>
           ) : null}
 
           <div className="btn-row">
-            <button className="btn" disabled>
-              Approve
-            </button>
-            <button className="btn" disabled>
-              {side === 'buy' ? 'Buy RACKS' : 'Sell RACKS'}
-            </button>
+            {t.needsApproval ? (
+              <button
+                className="btn"
+                disabled={!t.ready || !amount || t.status === 'approving'}
+                onClick={t.approve}
+              >
+                {t.status === 'approving' ? 'Approving…' : `Approve ${inSymbol}`}
+              </button>
+            ) : (
+              <button
+                className="btn"
+                disabled={
+                  !t.ready ||
+                  !quote ||
+                  !account ||
+                  t.exceedsCap ||
+                  t.status === 'swapping'
+                }
+                onClick={t.swap}
+              >
+                {t.status === 'swapping'
+                  ? 'Swapping…'
+                  : side === 'buy'
+                    ? 'Buy RACKS'
+                    : 'Sell RACKS'}
+              </button>
+            )}
           </div>
-          <p className="muted" style={{ marginTop: '0.5rem' }}>
-            Execution is not wired yet. It needs the IV4Quoter ABI to show what
-            you'd receive — without a quote there is no honest way to fill in
-            the minimum-output figure that protects you from slippage, and
-            guessing it would be worse than leaving the button off.
-          </p>
+
+          {t.status === 'success' ? (
+            <p className="muted protected" style={{ marginTop: 6 }}>
+              Done. Balances update on the next block.
+            </p>
+          ) : null}
+          {t.error ? (
+            <p className="muted loss" style={{ marginTop: 6 }}>
+              {t.error.split('\n')[0]}
+            </p>
+          ) : null}
         </Field>
 
-        {/* §7: the tax is shown BEFORE the trade, for this exact size, in both
-            directions, with the ceiling stated. Never a generic "4%". */}
         <Field
-          title="Tax on this trade"
-          note={oracleReady ? 'live from the oracle' : 'oracle not configured'}
+          title="Before you sign"
+          note={t.stale ? 'updating…' : t.quoting ? 'quoting…' : undefined}
         >
           {amount === undefined ? (
             <p className="muted">
-              Enter an amount. The tax is dynamic — it depends on trade size and
-              current pressure, so there is no single number to quote in
-              advance.
+              Enter an amount. The tax depends on trade size and direction, so
+              there is no single number to quote in advance.
             </p>
+          ) : quote === undefined ? (
+            <p className="muted">Fetching a quote…</p>
           ) : (
             <>
               <dl>
                 <Pair
-                  label="Buy tax now"
-                  value={buyPct === undefined ? '—' : pct(buyPct)}
+                  label="You pay"
+                  value={`${num(Number(formatUnits(amount, inDecimals)), 4)} ${inSymbol}`}
                 />
                 <Pair
-                  label="Sell tax now"
+                  label={`Tax (${pct(bpsToPct(quote.taxBps))})`}
                   value={
                     <span className="loss">
-                      {sellPct === undefined ? '—' : pct(sellPct)}
+                      −{num(Number(formatUnits(quote.taxAmount,
+                        side === 'buy' ? outDecimals : inDecimals)), 4)}{' '}
+                      {side === 'buy' ? outSymbol : inSymbol}
                     </span>
                   }
                 />
-                {taxCost !== undefined ? (
-                  <Pair
-                    label="You pay in tax"
-                    value={<span className="loss">{num(taxCost, 4)}</span>}
-                  />
-                ) : null}
-                {activePct !== undefined && parsedAmount > 0 ? (
-                  <Pair
-                    label="Reaches the pool"
-                    value={num(parsedAmount - (taxCost ?? 0), 4)}
-                  />
-                ) : null}
+                <Pair
+                  label="Expected"
+                  value={`${num(Number(formatUnits(quote.expected, outDecimals)), 4)} ${outSymbol}`}
+                />
+                <Pair
+                  label="At least"
+                  value={`${num(Number(formatUnits(quote.minOut, outDecimals)), 4)} ${outSymbol}`}
+                />
               </dl>
-              <p className="muted" style={{ marginTop: '0.75rem' }}>
-                Base is {bpsToPct(TAX.baseBps)}%. It rises to{' '}
-                {bpsToPct(TAX.maxSellBps)}% on sells under sell pressure and{' '}
-                {bpsToPct(TAX.maxBuyBps)}% on buys under buy pressure, and can
-                fall to {bpsToPct(TAX.floorBps)}%. It is re-read every few
-                seconds; the figure at signing is the one that applies.
+
+              <label htmlFor="slip" style={{ marginTop: 10 }}>
+                Slippage tolerance
+              </label>
+              <div className="btn-row" style={{ marginTop: 0 }}>
+                {SLIPPAGE_OPTIONS.map((s) => (
+                  <button
+                    key={s}
+                    className="btn"
+                    style={{ minWidth: 0 }}
+                    disabled={slippageBps === s}
+                    onClick={() => setSlippageBps(s)}
+                  >
+                    {bpsToPct(s)}%
+                  </button>
+                ))}
+              </div>
+              <p className="muted" style={{ marginTop: 6 }}>
+                Covers price movement only. The tax is a known cost and is
+                already subtracted above, not hidden in this tolerance.
               </p>
             </>
           )}
+
+          {t.capRemaining !== undefined ? (
+            <p className={t.exceedsCap ? 'muted loss' : 'muted'} style={{ marginTop: 8 }}>
+              Launch-hour wallet cap: {token(t.capRemaining, decimals, 0)} RACKS
+              left for this address
+              {maxWallet !== undefined
+                ? ` of ${token(maxWallet, decimals, 0)}`
+                : ''}
+              . The cap is cumulative across all your buys and cannot be reset
+              by sending tokens elsewhere.
+              {t.exceedsCap ? ' This trade would exceed it and would revert.' : ''}
+            </p>
+          ) : null}
         </Field>
       </div>
 
       <Notice kind="calm">
         <p>
-          Trades take two hops: USDG to SPY, then SPY to wRACKS. wRACKS is a
-          non-rebasing wrapper — your RACKS is wrapped before the swap and
-          unwrapped after, because a balance that shrinks every second can't sit
-          in a pool. The wrapper doesn't melt; the RACKS behind it does, so its
-          value per share falls instead.
+          One hop. RACKS sits directly in the Uniswap V2 pair — there is no
+          wrapper — and the tax lives in the token itself, which is why the
+          router's own quote has to be corrected for it before you see a
+          number. Your approval goes to the router.
         </p>
         <p className="muted">
-          One contract call handles all of it. You approve USDG (to buy) or
-          RACKS (to sell) to the Zap contract, and it owns both hops and the
-          wrapping.
+          On a buy the pair sends the full amount and the token taxes it on the
+          way to you. On a sell the tax comes off on the way into the pool, so
+          the pool receives less than you send. Same rate, different side.
+          {inLaunchWindow ? '' : ' Tax is capped at 8%.'}
         </p>
       </Notice>
     </div>

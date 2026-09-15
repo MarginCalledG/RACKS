@@ -7,9 +7,10 @@
  *     jq '.abi' out/$c.sol/$c.json > src/abi/$c.json
  *   done
  *
- * NOTE: trading is Uniswap V4, not V2. There is no router or pair ABI here on
- * purpose — the V2 Router02 and pair fragments were removed when the V4
- * contracts landed. User-facing trades go through Zap.buyRacks/sellRacks.
+ * NOTE: trading is Uniswap V2 with RACKS directly in the pair — no wrapper,
+ * one hop. The tax lives in the token itself. The v4 ABIs below (WRacks,
+ * TwapOracleV4, V4Swap, Zap, TaxHook, TaxSwapper) describe a removed
+ * architecture: they are kept for reference and must not be wired up again.
  *
  * NOTE: DynamicTax's ABI is an empty array — it exposes no external functions,
  * so there is nothing for the frontend to call. The dynamic tax is read
@@ -28,6 +29,7 @@ export { twapOracleV4Abi } from './TwapOracleV4'
 export { v4SwapAbi } from './V4Swap'
 export { zapAbi } from './Zap'
 export { taxHookAbi } from './TaxHook'
+export { v2RouterAbi, v2PairAbi } from './V2'
 
 /** Plain ERC20, for USDG and SPY. */
 export const erc20Abi = parseAbi([

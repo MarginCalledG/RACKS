@@ -30,6 +30,11 @@ export const addresses = {
   irsAgent: env('VITE_IRSAGENT_ADDRESS'),
   taxSwapper: env('VITE_TAXSWAPPER_ADDRESS'),
   twapOracle: env('VITE_TWAPORACLE_ADDRESS'),
+  router: env('VITE_ROUTER_ADDRESS'),
+  pair: env('VITE_PAIR_ADDRESS'),
+  // --- removed architecture, do not wire up again -------------------------
+  // These belonged to the Uniswap v4 + wRACKS design that no longer exists.
+  // Kept so stale imports don't break, not because they resolve to anything.
   wracks: env('VITE_WRACKS_ADDRESS'),
   zap: env('VITE_ZAP_ADDRESS'),
   v4Swap: env('VITE_V4SWAP_ADDRESS'),
@@ -40,13 +45,11 @@ export const addresses = {
 } as const
 
 /**
- * Resolved: the pool holds wRACKS, not RACKS, and trading is Uniswap V4.
- *
- * The route is USDG <-> SPY <-> wRACKS across two V4 pools. Zap owns both hops
- * plus the wrap/unwrap, so the frontend calls one function per direction and
- * never touches a pool key, a router or the wrapper directly.
+ * No wrapper. RACKS sits directly in the V2 pair and the tax lives in the
+ * token, so a trade is one hop through the router and approvals go to the
+ * router. The wRACKS/Zap route was removed from the contracts.
  */
-export const tradesThroughWrapper = true
+export const tradesThroughWrapper = false
 
 export type ContractKey = keyof typeof addresses
 
